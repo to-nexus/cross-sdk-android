@@ -14,8 +14,6 @@ interface CoreInterface {
     val Pairing: PairingInterface
     val PairingController: PairingControllerInterface
     val Relay: RelayConnectionInterface
-    @Deprecated(message = "Replaced with Push")
-    val Echo: PushInterface
     val Push: PushInterface
     val Verify: VerifyInterface
     val Explorer: ExplorerInterface
@@ -32,19 +30,20 @@ interface CoreInterface {
         relay: RelayConnectionInterface? = null,
         keyServerUrl: String? = null,
         networkClientTimeout: NetworkClientTimeout? = null,
-        telemetryEnabled: Boolean = true,
+        telemetryEnabled: Boolean = false,
         onError: (Core.Model.Error) -> Unit,
     )
 
     fun initialize(
         application: Application,
         projectId: String,
+        crossProjectId: String,
         metaData: Core.Model.AppMetaData,
         connectionType: ConnectionType = ConnectionType.AUTOMATIC,
         relay: RelayConnectionInterface? = null,
         keyServerUrl: String? = null,
         networkClientTimeout: NetworkClientTimeout? = null,
-        telemetryEnabled: Boolean = true,
+        telemetryEnabled: Boolean = false,
         onError: (Core.Model.Error) -> Unit,
     )
 }

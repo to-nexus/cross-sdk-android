@@ -21,7 +21,9 @@ internal fun String.strippedUrl() = Uri.parse(this).run {
 @JvmSynthetic
 internal fun String.isValidRelayServerUrl(): Boolean {
     return this.isNotBlank() && Uri.parse(this)?.let { relayUrl ->
-        arrayOf("wss", "ws").contains(relayUrl.scheme) && !relayUrl.getQueryParameter("projectId").isNullOrBlank()
+        arrayOf("wss", "ws").contains(relayUrl.scheme) &&
+        !relayUrl.getQueryParameter("projectId").isNullOrBlank() &&
+        !relayUrl.getQueryParameter("crossProjectId").isNullOrBlank()
     } ?: false
 }
 
@@ -30,6 +32,13 @@ internal fun String.isValidRelayServerUrl(): Boolean {
 internal fun String.projectId(): String {
     return Uri.parse(this)!!.let { relayUrl ->
         relayUrl.getQueryParameter("projectId")!!
+    }
+}
+
+@JvmSynthetic
+internal fun String.crossProjectId(): String {
+    return Uri.parse(this)!!.let { relayUrl ->
+        relayUrl.getQueryParameter("crossProjectId")!!
     }
 }
 

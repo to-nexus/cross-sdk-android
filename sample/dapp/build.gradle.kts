@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     id(libs.plugins.android.application.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
@@ -22,25 +24,30 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "PROJECT_ID", "\"${System.getenv("CROSS_CLOUD_PROJECT_ID") ?: ""}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("String", "BOM_VERSION", "\"${BOM_VERSION}\"")
     }
 
     buildTypes {
+        val params = "projectId=${getLocalProperty("WC_CLOUD_PROJECT_ID")}&crossProjectId=${getLocalProperty("CROSS_PROJECT_ID")}"
+
         getByName("release") {
             manifestPlaceholders["pathPrefix"] = "/dapp_release"
             buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_release\"")
+            buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
         }
 
         getByName("internal") {
             manifestPlaceholders["pathPrefix"] = "/dapp_internal"
             buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_internal\"")
-
+            buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
         }
 
         getByName("debug") {
             manifestPlaceholders["pathPrefix"] = "/dapp_debug"
             buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_debug\"")
+            buildConfigField("String", "RELAY_SERVER_URL", "\"ws://10.0.2.2:8080/ws?${params}\"")
         }
     }
 
@@ -65,6 +72,10 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
+}
+
+fun getLocalProperty(key: String, defValue: String = ""): String {
+    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
 }
 
 dependencies {

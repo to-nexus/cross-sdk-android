@@ -46,7 +46,7 @@ class WCInstrumentedActivityScenario : TestRule {
             Timber.plant(
                 object : Timber.DebugTree() {
                     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-                        super.log(priority, "WalletConnectV2", message, t)
+                        super.log(priority, "CrossWalletConnect", message, t)
                     }
                 }
             )

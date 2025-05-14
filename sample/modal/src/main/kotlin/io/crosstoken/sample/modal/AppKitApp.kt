@@ -33,6 +33,7 @@ class AppKitApp : Application() {
 
         CoreClient.initialize(
             projectId = CommonBuildConfig.PROJECT_ID,
+            crossProjectId = CommonBuildConfig.CROSS_PROJECT_ID,
             connectionType = ConnectionType.AUTOMATIC,
             application = this,
             metaData = appMetaData,

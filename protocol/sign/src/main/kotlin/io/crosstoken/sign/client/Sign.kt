@@ -18,14 +18,6 @@ object Sign {
         }
     }
 
-    @Deprecated(
-        message = "ConnectionType for the relay is moved to CoreClient",
-        replaceWith = ReplaceWith(expression = "ConnectionType", imports = ["io.crosstoken.android.relay"])
-    )
-    enum class ConnectionType {
-        AUTOMATIC, MANUAL
-    }
-
     sealed class Model {
 
         data class Error(val throwable: Throwable) : Model()

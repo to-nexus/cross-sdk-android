@@ -50,6 +50,17 @@ enum class Chains(
     val chainId: String = "$chainNamespace:$chainReference"
 ) {
 
+    CROSS_MAIN(
+        chainName = "Cross",
+        chainNamespace = Info.Eth.chain,
+        chainReference = "612055",
+        icon = R.drawable.ic_cross,
+        color = "#ff20e2bb",
+        methods = Info.Eth.defaultMethods,
+        events = Info.Eth.defaultEvents,
+        order = 0
+    ),
+
     ETHEREUM_MAIN(
         chainName = "Ethereum",
         chainNamespace = Info.Eth.chain,

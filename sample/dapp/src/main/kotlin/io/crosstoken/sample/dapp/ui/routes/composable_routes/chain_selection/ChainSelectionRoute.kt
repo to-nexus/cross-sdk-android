@@ -168,10 +168,25 @@ private fun onAuthenticateSuccess(
     dispatcher: CoroutineDispatcher
 ) {
     if (uri != null) {
-        if (appLink.contains("rn_walletkit")) {
-            redirectToRNWallet(uri, context, composableScope, dispatcher)
-        } else {
-            redirectToKotlinWallet(uri, context, composableScope, dispatcher)
+        when {
+            appLink.contains("cross") -> redirectToCrossWallet(uri, context, composableScope, dispatcher)
+            appLink.contains("rn_walletkit") -> redirectToRNWallet(uri, context, composableScope, dispatcher)
+            else -> redirectToKotlinWallet(uri, context, composableScope, dispatcher)
+        }
+    }
+}
+
+private fun redirectToCrossWallet(uri: String?, context: Context, composableScope: CoroutineScope, dispatcher: CoroutineDispatcher) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            val encoded = URLEncoder.encode(uri, "UTF-8")
+            data = "crossx://wc?uri=$encoded".toUri()
+            `package` = CROSS_WALLET_PACKAGE
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        composableScope.launch(dispatcher) {
+            Toast.makeText(context, "Please install Kotlin Sample Wallet", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -268,6 +283,15 @@ private fun ChainSelectionScreen(
                     .padding(horizontal = 16.dp),
             )
             BlueButton(
+                text = "1-CA Link Mode (CROSSx)",
+                onClick = { onAuthenticateLinkMode(if (context.packageManager.isPackageInstalled(CROSS_WALLET_PACKAGE)) "https://lab.web3modal.com/wallet_release" else "") },
+                modifier = Modifier
+                    .padding(vertical = 10.dp)
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .padding(horizontal = 16.dp)
+            )
+            BlueButton(
                 text = "1-CA Link Mode (Kotlin Sample Wallet)",
                 onClick = {
                     val applink = when {
@@ -348,6 +372,12 @@ private fun QRDialog(composableScope: CoroutineScope, dispatcher: CoroutineDispa
                     )
                 } ?: Text("Error while generating QR code", modifier = Modifier.padding(16.dp))
                 Button(
+                    onClick = { onCrossWalletDeepLink(onDismissRequest, pairingUri, context, composableScope, dispatcher) },
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    Text("Deep link to CROSSx")
+                }
+                Button(
                     onClick = { onKotlinWalletDeepLink(onDismissRequest, pairingUri, context, composableScope, dispatcher) },
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
@@ -375,6 +405,28 @@ private fun QRDialog(composableScope: CoroutineScope, dispatcher: CoroutineDispa
                     Text("Close")
                 }
             }
+        }
+    }
+}
+
+private fun onCrossWalletDeepLink(
+    onDismissRequest: () -> Unit,
+    pairingUri: PairingUri,
+    context: Context,
+    composableScope: CoroutineScope,
+    dispatcher: CoroutineDispatcher
+) {
+    onDismissRequest()
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            val encoded = URLEncoder.encode(pairingUri.uri, "UTF-8")
+            data = "crossx://wc?uri=$encoded".toUri()
+            `package` = CROSS_WALLET_PACKAGE
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        composableScope.launch(dispatcher) {
+            Toast.makeText(context, "Please install Kotlin Sample Wallet", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -629,6 +681,7 @@ private class ChainSelectionStateProvider : PreviewParameterProvider<List<ChainS
         )
 }
 
+private const val CROSS_WALLET_PACKAGE = "com.nexus.crosswallet"
 private const val SAMPLE_WALLET_DEBUG_PACKAGE = "com.reown.sample.wallet.debug"
 private const val SAMPLE_WALLET_INTERNAL_PACKAGE = "com.reown.sample.wallet.internal"
 private const val SAMPLE_WALLET_RELEASE_PACKAGE = "com.reown.sample.wallet"

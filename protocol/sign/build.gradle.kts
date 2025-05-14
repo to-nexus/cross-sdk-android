@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     id(libs.plugins.android.library.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
@@ -32,7 +34,12 @@ android {
         buildConfigField(
             "String",
             "PROJECT_ID",
-            "\"${System.getenv("WC_CLOUD_PROJECT_ID") ?: ""}\""
+            "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\""
+        )
+        buildConfigField(
+            "String",
+            "CROSS_PROJECT_ID",
+            "\"${getLocalProperty("CROSS_PROJECT_ID")}\""
         )
         buildConfigField(
             "Integer",
@@ -84,6 +91,10 @@ android {
     buildFeatures {
         buildConfig = true
     }
+}
+
+fun getLocalProperty(key: String, defValue: String = ""): String {
+    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
 }
 
 sqldelight {

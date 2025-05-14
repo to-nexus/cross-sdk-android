@@ -22,7 +22,7 @@ object Modal {
             val excludedWalletIds: List<String> = listOf(),
             val includeWalletIds: List<String> = listOf(),
             val recommendedWalletsIds: List<String> = listOf(),
-            val coinbaseEnabled: Boolean = true,
+            val coinbaseEnabled: Boolean = false,
             val enableAnalytics: Boolean? = null
         ) : Params()
 
@@ -56,17 +56,6 @@ object Modal {
         data class Disconnect(val sessionTopic: String) : Params()
 
         data class Ping(val topic: String) : Params()
-
-        @Deprecated(
-            message = "Converted to sealed class to support multiple connectors",
-            replaceWith = ReplaceWith("io.crosstoken.appkit.client.models.Request"),
-            level = DeprecationLevel.WARNING
-        )
-        data class Request(
-            val method: String,
-            val params: String,
-            val expiry: Long? = null,
-        ) : Params()
 
         data class SessionParams(
             val requiredNamespaces: Map<String, Model.Namespace.Proposal>,

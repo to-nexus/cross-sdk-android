@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     id("com.android.library")
     id(libs.plugins.kotlin.android.get().pluginId)
@@ -21,7 +23,8 @@ android {
         minSdk = MIN_SDK
 
         buildConfigField(type = "String", name = "SDK_VERSION", value = "\"${requireNotNull(extra.get(KEY_PUBLISH_VERSION))}\"")
-        buildConfigField("String", "PROJECT_ID", "\"${System.getenv("CROSS_CLOUD_PROJECT_ID") ?: ""}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("Integer", "TEST_TIMEOUT_SECONDS", "${System.getenv("TEST_TIMEOUT_SECONDS") ?: 30}")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -75,6 +78,10 @@ android {
 
         registerManagedDevices()
     }
+}
+
+fun getLocalProperty(key: String, defValue: String = ""): String {
+    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key, defValue)
 }
 
 sqldelight {

@@ -12,7 +12,7 @@ internal fun plantTimber() {
                      * Override [log] to modify the tag and add a "global tag" prefix to it. You can rename the String "global_tag_" as you see fit.
                      */
                     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-                        super.log(priority, "WalletConnectV2", message, t)
+                        super.log(priority, "CrossWalletConnect", message, t)
                     }
                 }
             )

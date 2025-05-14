@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     id("com.android.library")
     id(libs.plugins.kotlin.android.get().pluginId)
@@ -13,7 +15,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        buildConfigField("String", "PROJECT_ID", "\"${System.getenv("CROSS_CLOUD_PROJECT_ID") ?: ""}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("String", "MIX_PANEL", "\"${System.getenv("MIX_PANEL") ?: ""}\"")
         buildConfigField("String", "BOM_VERSION", "\"$BOM_VERSION\"")
         resValue("string", "sentry_dsn", System.getenv("SENTRY_DSN") ?: "")
@@ -43,6 +46,10 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
     }
+}
+
+fun getLocalProperty(key: String, defValue: String = ""): String {
+    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
 }
 
 dependencies {

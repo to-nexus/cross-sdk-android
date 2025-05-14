@@ -33,7 +33,8 @@ class DappSampleApp : Application() {
 
         CoreClient.initialize(
             application = this,
-            projectId = CommonBuildConfig.PROJECT_ID,
+            relayServerUrl = BuildConfig.RELAY_SERVER_URL,
+            // projectId = CommonBuildConfig.PROJECT_ID,
             metaData = appMetaData,
         ) {
             Firebase.crashlytics.recordException(it.throwable)

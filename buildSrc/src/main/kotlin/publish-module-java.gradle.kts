@@ -1,0 +1,81 @@
+plugins {
+    `maven-publish`
+    signing
+    id("org.jetbrains.dokka")
+}
+
+tasks {
+    plugins.withId("java") {
+        register("javadocJar", Jar::class) {
+            dependsOn(named("dokkaHtml"))
+            archiveClassifier.set("javadoc")
+            from("${layout.buildDirectory}/dokka/html")
+        }
+        register("sourceJar", Jar::class) {
+            archiveClassifier.set("sources")
+            from(((project as ExtensionAware).extensions.getByName("sourceSets") as SourceSetContainer).getByName("main").allSource)
+        }
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("mavenJvm") {
+                plugins.withId("java") {
+                    from(components["java"])
+                    artifact(tasks.getByName("sourceJar"))
+                    artifact(tasks.getByName("javadocJar"))
+                }
+
+                plugins.withId("java-platform") {
+                    from(components["javaPlatform"])
+                }
+
+                groupId = "io.crosstoken"
+                artifactId = requireNotNull(extra.get(KEY_PUBLISH_ARTIFACT_ID)).toString()
+                version = requireNotNull(extra.get(KEY_PUBLISH_VERSION)).toString()
+
+                pom {
+                    name.set("Cross ${requireNotNull(extra.get(KEY_SDK_NAME))}")
+                    description.set("${requireNotNull(extra.get(KEY_SDK_NAME))} SDK for Cross")
+                    url.set("https://github.com/to-nexus/cross-sdk-android")
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                        license {
+                            name.set("SQLCipher Community Edition")
+                            url.set("https://www.zetetic.net/sqlcipher/license/")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set("NexusCross")
+                            name.set("Nexus Cross Kotlin")
+                            email.set("dev@to.nexus")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git:git://github.com/to-nexus/cross-sdk-android.git")
+                        developerConnection.set("scm:git:ssh://github.com/to-nexus/cross-sdk-android.git")
+                        url.set("https://github.com/to-nexus/cross-sdk-android")
+                    }
+                }
+            }
+        }
+    }
+}
+
+signing {
+    useInMemoryPgpKeys(
+        System.getenv("SIGNING_KEY_ID"),
+        System.getenv("SIGNING_KEY"),
+        System.getenv("SIGNING_PASSWORD")
+    )
+    sign(publishing.publications)
+}

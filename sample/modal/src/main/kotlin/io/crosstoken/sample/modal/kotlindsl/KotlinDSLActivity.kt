@@ -1,0 +1,26 @@
+package io.crosstoken.sample.modal.kotlindsl
+
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.createGraph
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.fragment.fragment
+import io.crosstoken.sample.modal.common.Route
+import io.crosstoken.sample.modal.R
+import io.crosstoken.appkit.ui.appKit
+
+class KotlinDSLActivity : AppCompatActivity(R.layout.activity_kotlin_dsl) {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
+        navController.graph = navController.createGraph(
+            startDestination = Route.Home.path
+        ) {
+            fragment<HomeFragment>(Route.Home.path)
+            appKit()
+        }
+    }
+}

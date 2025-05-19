@@ -5,8 +5,10 @@ import io.crosstoken.android.internal.common.modal.data.model.Wallet
 import io.crosstoken.appkit.client.Modal
 import io.crosstoken.appkit.domain.model.AccountData
 
+private val crossx: Wallet
+    get() = Wallet(id = "1", name = "CROSSx", homePage = "", order = "", imageUrl = "", mobileLink = "crossx://", webAppLink = "", playStore = "", linkMode = "").apply { isRecent = true }
 private val metaMask: Wallet
-    get() = Wallet(id = "1", name = "MetaMask", homePage = "", order = "", imageUrl = "", mobileLink = "metamask://", webAppLink = "", playStore = "", linkMode = "").apply { isRecent = true }
+    get() = Wallet(id = "1", name = "MetaMask", homePage = "", order = "", imageUrl = "", mobileLink = "metamask://", webAppLink = "", playStore = "", linkMode = "")
 private val trustWallet: Wallet
     get() = Wallet(id = "2", name = "Trust Wallet", homePage = "", order = "", imageUrl = "", mobileLink = "trustwallet://", webAppLink = "", playStore = "", linkMode = "").apply {
         isWalletInstalled = true
@@ -39,7 +41,7 @@ private val safePal: Wallet
     get() = Wallet(id = "15", name = "SafePal", homePage = "", order = "", imageUrl = "", mobileLink = "safepal://", webAppLink = "", playStore = "", linkMode = "")
 
 internal val testWallets: List<Wallet>
-    get() = listOf(metaMask, trustWallet, safe, rainbow, zerion, argent, spot, imToken, alphaWallet, omni, bitkeep, tokenPocket, ledgerLive, frontier, safePal)
+    get() = listOf(crossx, metaMask, trustWallet, safe, rainbow, zerion, argent, spot, imToken, alphaWallet, omni, bitkeep, tokenPocket, ledgerLive, frontier, safePal)
 
 internal val accountDataPreview: AccountData
     get() = AccountData(
@@ -59,7 +61,21 @@ internal class ConnectYourWalletPreviewProvider : PreviewParameterProvider<List<
     )
 }
 
+private val crossToken = Modal.Model.Token(name = "Cross", symbol = "CROSS", decimal = 18)
 private val ethToken = Modal.Model.Token(name = "Ether", symbol = "ETH", decimal = 18)
+
+internal val crossChain: Modal.Model.Chain
+    get() = Modal.Model.Chain(
+        chainName = "Cross",
+        chainNamespace = "eip155",
+        chainReference = "612055",
+        requiredMethods = listOf(),
+        optionalMethods = listOf(),
+        events = listOf(),
+        token = crossToken,
+        rpcUrl = "https://mainnet.crosstoken.io:22001",
+        blockExplorerUrl = "https://mainnet.crossscan.io"
+    )
 
 internal val ethereumChain: Modal.Model.Chain
     get() = Modal.Model.Chain(
@@ -88,4 +104,4 @@ internal val arbitrumChain: Modal.Model.Chain
     )
 
 internal val testChains: List<Modal.Model.Chain>
-    get() = listOf(ethereumChain, arbitrumChain)
+    get() = listOf(crossChain, ethereumChain, arbitrumChain)

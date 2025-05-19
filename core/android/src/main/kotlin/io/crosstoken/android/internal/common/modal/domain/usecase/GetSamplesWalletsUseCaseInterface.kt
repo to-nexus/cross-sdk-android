@@ -13,6 +13,7 @@ internal class GetSampleWalletsUseCase(
 ) : GetSampleWalletsUseCaseInterface {
     override suspend fun invoke(): List<Wallet> {
         val samples = mapOf(
+            "com.nexus.crosswallet.dev" to CrossWalletDev,
             "com.nexus.crosswallet" to CrossWallet,
             "com.reown.sample.wallet.debug" to SampleWalletDebug,
             "com.reown.sample.wallet.internal" to SampleWalletInternal,
@@ -31,16 +32,29 @@ internal class GetSampleWalletsUseCase(
     }
 }
 
-private val CrossWallet = Wallet(
-    id = "CrossWallet",
-    name = "CROSSx",
+private val CrossWalletDev = Wallet(
+    id = "CrossWalletDev",
+    name = "CROSSx(dev)",
     homePage = "https://to.nexus",
     imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
     order = "1",
     mobileLink = "crossx://",
     playStore = null,
     webAppLink = null,
-    linkMode = "https://appkit-lab.reown.com/wallet_release",
+    linkMode = "",
+    true
+)
+
+private val CrossWallet = Wallet(
+    id = "CrossWallet",
+    name = "CROSSx",
+    homePage = "https://to.nexus",
+    imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
+    order = "2",
+    mobileLink = "crossx://",
+    playStore = null,
+    webAppLink = null,
+    linkMode = "",
     true
 )
 
@@ -49,7 +63,7 @@ private val SampleWalletDebug = Wallet(
     name = "Android Sample Debug",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "2",
+    order = "3",
     mobileLink = "kotlin-web3wallet://",
     playStore = null,
     webAppLink = null,
@@ -62,7 +76,7 @@ private val SampleWalletInternal = Wallet(
     name = "Android Sample Internal",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "3",
+    order = "4",
     mobileLink = "kotlin-web3wallet://",
     playStore = null,
     webAppLink = null,
@@ -75,7 +89,7 @@ private val SampleWalletRelease = Wallet(
     name = "Android Sample Release",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "4",
+    order = "5",
     mobileLink = "kotlin-web3wallet://",
     playStore = null,
     webAppLink = null,
@@ -88,7 +102,7 @@ private val RNSampleWalletInternal = Wallet(
     name = "RN Sample",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "5",
+    order = "6",
     mobileLink = "rn-web3wallet://",
     playStore = null,
     webAppLink = null,
@@ -101,7 +115,7 @@ private val RNSampleWallet = Wallet(
     name = "RN Sample Internal",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "6",
+    order = "7",
     mobileLink = "rn-web3wallet://",
     playStore = null,
     webAppLink = null,
@@ -114,7 +128,7 @@ private val FLSampleWallet = Wallet(
     name = "FL Sample",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "7",
+    order = "8",
     mobileLink = "wcflutterwallet://",
     playStore = null,
     webAppLink = null,
@@ -127,7 +141,7 @@ private val FLSampleWalletInternal = Wallet(
     name = "FL Sample Internal",
     homePage = "https://walletconnect.com",
     imageUrl = "https://raw.githubusercontent.com/WalletConnect/WalletConnectKotlinV2/develop/sample/wallet/src/main/res/drawable-xxxhdpi/wc_icon.png",
-    order = "8",
+    order = "9",
     mobileLink = "wcflutterwallet-internal://",
     playStore = null,
     webAppLink = null,

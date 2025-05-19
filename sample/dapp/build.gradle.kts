@@ -47,7 +47,7 @@ android {
         getByName("debug") {
             manifestPlaceholders["pathPrefix"] = "/dapp_debug"
             buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_debug\"")
-            buildConfigField("String", "RELAY_SERVER_URL", "\"ws://10.0.2.2:8080/ws?${params}\"")
+            buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
         }
     }
 

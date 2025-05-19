@@ -34,7 +34,6 @@ class DappSampleApp : Application() {
         CoreClient.initialize(
             application = this,
             relayServerUrl = BuildConfig.RELAY_SERVER_URL,
-            // projectId = CommonBuildConfig.PROJECT_ID,
             metaData = appMetaData,
         ) {
             Firebase.crashlytics.recordException(it.throwable)

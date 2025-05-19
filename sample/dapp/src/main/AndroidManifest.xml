@@ -15,6 +15,7 @@
         <package android:name="com.bitkeep.wallet"/>
         <package android:name="im.argent.contractwalletclient"/>
         <package android:name="com.nexus.crosswallet"/>
+        <package android:name="com.nexus.crosswallet.dev"/>
         <package android:name="com.walletconnect.web3wallet.rnsample.internal"/>
         <package android:name="com.walletconnect.flutterwallet"/>
         <package android:name="com.walletconnect.flutterwallet.internal"/>

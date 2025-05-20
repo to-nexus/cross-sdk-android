@@ -70,12 +70,18 @@ class ChainSelectionViewModel : ViewModel() {
         }
     }
 
-    fun authenticate(authenticateParams: Modal.Params.Authenticate, appLink: String = "", onAuthenticateSuccess: (String?) -> Unit, onError: (String) -> Unit = {}) {
+    fun authenticate(
+        authenticateParams: Modal.Params.Authenticate,
+        appLink: String = "",
+        onAuthenticateSuccess: (String?) -> Unit,
+        onError: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             _awaitingProposalSharedFlow.emit(true)
         }
 
-        AppKit.authenticate(authenticateParams, walletAppLink = appLink,
+        AppKit.authenticate(
+            authenticateParams, walletAppLink = appLink,
             onSuccess = { url ->
                 viewModelScope.launch {
                     _awaitingProposalSharedFlow.emit(false)
@@ -117,7 +123,8 @@ class ChainSelectionViewModel : ViewModel() {
                         pairing = pairing
                     )
 
-                AppKit.connect(connectParams,
+                AppKit.connect(
+                    connectParams,
                     onSuccess = { url ->
                         if (pairingTopicPosition == -1) {
                             viewModelScope.launch {
@@ -147,7 +154,7 @@ class ChainSelectionViewModel : ViewModel() {
     private fun getNamespaces(): Map<String, Modal.Model.Namespace.Proposal> {
         val namespaces: Map<String, Modal.Model.Namespace.Proposal> =
             uiState.value
-                .filter { it.isSelected && it.chainId != Chains.POLYGON_MATIC.chainId && it.chainId != Chains.ETHEREUM_KOVAN.chainId }
+                .filter { it.isSelected && it.chainId != Chains.POLYGON_MATIC.chainId && it.chainId != Chains.ETHEREUM_SEPOLIA.chainId }
                 .groupBy { it.chainNamespace }
                 .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
                     key to Modal.Model.Namespace.Proposal(
@@ -158,7 +165,7 @@ class ChainSelectionViewModel : ViewModel() {
                 }.toMap()
 
         val tmp = uiState.value
-            .filter { it.isSelected && it.chainId == Chains.ETHEREUM_KOVAN.chainId }
+            .filter { it.isSelected && it.chainId == Chains.ETHEREUM_SEPOLIA.chainId }
             .groupBy { it.chainId }
             .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
                 key to Modal.Model.Namespace.Proposal(

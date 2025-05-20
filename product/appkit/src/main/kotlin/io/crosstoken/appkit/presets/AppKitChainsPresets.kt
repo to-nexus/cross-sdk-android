@@ -41,6 +41,17 @@ object AppKitChainsPresets {
             rpcUrl = "https://cloudflare-eth.com",
             blockExplorerUrl = "https://etherscan.io"
         ),
+        "111155111" to Modal.Model.Chain(
+            chainName = "Ethereum Sepolia",
+            chainNamespace = "eip155",
+            chainReference = "11155111",
+            requiredMethods = EthUtils.ethRequiredMethods,
+            optionalMethods = EthUtils.ethOptionalMethods,
+            events = EthUtils.ethEvents,
+            token = ethToken,
+            rpcUrl = "https://rpc.sepolia.dev",
+            blockExplorerUrl = "https://sepolia.etherscan.io/"
+        ),
         "42161" to Modal.Model.Chain(
             chainName = "Arbitrum One",
             chainNamespace = "eip155",

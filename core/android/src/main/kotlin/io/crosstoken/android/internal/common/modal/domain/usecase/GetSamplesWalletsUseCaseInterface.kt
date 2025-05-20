@@ -11,10 +11,8 @@ interface GetSampleWalletsUseCaseInterface {
 internal class GetSampleWalletsUseCase(
     private val context: Context
 ) : GetSampleWalletsUseCaseInterface {
-    override suspend fun invoke(): List<Wallet> {
+    override suspend fun invoke(): List<Wallet> = listOf() /*{
         val samples = mapOf(
-            "com.nexus.crosswallet.dev" to CrossWalletDev,
-            "com.nexus.crosswallet" to CrossWallet,
             "com.reown.sample.wallet.debug" to SampleWalletDebug,
             "com.reown.sample.wallet.internal" to SampleWalletInternal,
             "com.reown.sample.wallet" to SampleWalletRelease,
@@ -29,34 +27,8 @@ internal class GetSampleWalletsUseCase(
             }
         }
         return samples.map { it.value }.filter { it.isWalletInstalled }
-    }
+    }*/
 }
-
-private val CrossWalletDev = Wallet(
-    id = "CrossWalletDev",
-    name = "CROSSx(dev)",
-    homePage = "https://to.nexus",
-    imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
-    order = "1",
-    mobileLink = "crossx://",
-    playStore = null,
-    webAppLink = null,
-    linkMode = "",
-    true
-)
-
-private val CrossWallet = Wallet(
-    id = "CrossWallet",
-    name = "CROSSx",
-    homePage = "https://to.nexus",
-    imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
-    order = "2",
-    mobileLink = "crossx://",
-    playStore = null,
-    webAppLink = null,
-    linkMode = "",
-    true
-)
 
 private val SampleWalletDebug = Wallet(
     id = "SampleWalletDebug",

@@ -1,13 +1,15 @@
 package io.crosstoken.android.internal.common.modal.domain.usecase
 
-import io.crosstoken.android.internal.common.modal.AppKitApiRepository
+//import io.crosstoken.android.internal.common.modal.AppKitApiRepository
+import io.crosstoken.android.internal.common.modal.AppKitApiRepositoryInterface
 import kotlinx.coroutines.runBlocking
 
 interface EnableAnalyticsUseCaseInterface {
     fun fetchAnalyticsConfig(): Boolean
 }
 
-internal class EnableAnalyticsUseCase(private val repository: AppKitApiRepository) : EnableAnalyticsUseCaseInterface {
+internal class EnableAnalyticsUseCase(private val repository: /*AppKitApiRepository*/ AppKitApiRepositoryInterface) :
+    EnableAnalyticsUseCaseInterface {
     override fun fetchAnalyticsConfig(): Boolean {
         return runBlocking {
             try {

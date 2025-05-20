@@ -70,7 +70,7 @@ private fun WalletsList(
         itemsIndexed(items = wallets.take(4)) { _, item ->
             WalletListSelect(item, onWalletItemClick)
         }
-        allWallets(text = walletSizeLabel(walletsTotalCount), onClick = onViewAllClick)
+        //allWallets(text = walletSizeLabel(walletsTotalCount), onClick = onViewAllClick)
     }
 }
 

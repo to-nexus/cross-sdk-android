@@ -9,30 +9,42 @@ import io.crosstoken.android.internal.common.modal.data.network.model.WalletDTO
 import io.crosstoken.android.internal.common.modal.data.network.model.WalletDataDTO
 import io.crosstoken.android.utils.isWalletInstalled
 
-internal class AppKitApiRepository(
-    private val context: Context,
-    private val web3ModalApiUrl: String,
-    private val appKitService: AppKitService
-) {
-
-    suspend fun getAndroidWalletsData(sdkType: String) = runCatching {
-        appKitService.getAndroidData(sdkType = sdkType)
-    }.mapCatching { response ->
-        response.body()!!.data.toWalletsAppData().filter { it.isInstalled }
-    }
-
-    suspend fun getAnalyticsConfig(sdkType: String = "w3m") = runCatching {
-        appKitService.getAnalyticsConfig(sdkType = sdkType)
-    }.mapCatching { response ->
-        response.body()!!.isAnalyticsEnabled
-    }
-
+internal interface AppKitApiRepositoryInterface {
+    suspend fun getAndroidWalletsData(sdkType: String): Result<List<WalletAppData>>
+    suspend fun getAnalyticsConfig(sdkType: String = "w3m"): Result<Boolean>
     suspend fun getWallets(
         sdkType: String,
         page: Int,
         search: String? = null,
         excludeIds: List<String>? = null,
         includeWallets: List<String>? = null
+    ): Result<WalletListing>
+}
+
+internal class AppKitApiRepository(
+    private val context: Context,
+    private val web3ModalApiUrl: String,
+    private val appKitService: AppKitService
+) : AppKitApiRepositoryInterface {
+
+    override suspend fun getAndroidWalletsData(sdkType: String) = runCatching {
+        appKitService.getAndroidData(sdkType = sdkType)
+    }.mapCatching { response ->
+        response.body()!!.data.toWalletsAppData().filter { it.isInstalled }
+    }
+
+    override suspend fun getAnalyticsConfig(sdkType: String) = runCatching {
+        appKitService.getAnalyticsConfig(sdkType = sdkType)
+    }.mapCatching { response ->
+        response.body()!!.isAnalyticsEnabled
+    }
+
+    override suspend fun getWallets(
+        sdkType: String,
+        page: Int,
+        search: String?,
+        excludeIds: List<String>?,
+        includeWallets: List<String>?
     ) = runCatching {
         appKitService.getWallets(
             sdkType = sdkType,

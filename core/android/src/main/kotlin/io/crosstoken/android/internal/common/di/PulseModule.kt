@@ -2,6 +2,7 @@ package io.crosstoken.android.internal.common.di
 
 import com.squareup.moshi.Moshi
 import io.crosstoken.android.internal.common.model.TelemetryEnabled
+import io.crosstoken.android.pulse.data.CrossPulseService
 import io.crosstoken.android.pulse.data.PulseService
 import io.crosstoken.android.pulse.domain.InsertEventUseCase
 import io.crosstoken.android.pulse.domain.InsertTelemetryEventUseCase
@@ -14,19 +15,27 @@ import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
 @JvmSynthetic
-fun pulseModule(bundleId: String) = module {
-    single(named(AndroidCommonDITags.PULSE_URL)) { "https://pulse.walletconnect.org" }
+fun pulseModule(bundleId: String, useRemote: Boolean = false) = module {
+    if (useRemote) {
+        single(named(AndroidCommonDITags.PULSE_URL)) { "https://pulse.walletconnect.org" }
 
-    single(named(AndroidCommonDITags.PULSE_RETROFIT)) {
-        Retrofit.Builder()
-            .baseUrl(get<String>(named(AndroidCommonDITags.PULSE_URL)))
-            .client(get(named(AndroidCommonDITags.APPKIT_OKHTTP)))
-            .addConverterFactory(MoshiConverterFactory.create(get<Moshi.Builder>(named(AndroidCommonDITags.MOSHI)).build()))
-            .build()
-    }
+        single(named(AndroidCommonDITags.PULSE_RETROFIT)) {
+            Retrofit.Builder()
+                .baseUrl(get<String>(named(AndroidCommonDITags.PULSE_URL)))
+                .client(get(named(AndroidCommonDITags.APPKIT_OKHTTP)))
+                .addConverterFactory(MoshiConverterFactory.create(get<Moshi.Builder>(named(AndroidCommonDITags.MOSHI)).build()))
+                .build()
+        }
 
-    single {
-        get<Retrofit>(named(AndroidCommonDITags.PULSE_RETROFIT)).create(PulseService::class.java)
+        single {
+            get<Retrofit>(named(AndroidCommonDITags.PULSE_RETROFIT)).create(PulseService::class.java)
+        }
+    } else {
+        // In default config, this module does not send message to remote server.
+        // It just logs the event locally.
+        single<PulseService> {
+            CrossPulseService(get(named(AndroidCommonDITags.LOGGER)))
+        }
     }
 
     single<SendEventInterface> {

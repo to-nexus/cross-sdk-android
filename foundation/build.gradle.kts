@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -26,9 +27,13 @@ tasks.withType<KotlinCompile>() {
 
 tasks.withType<Test> {
     systemProperty("SDK_VERSION", requireNotNull(project.extra.get(KEY_PUBLISH_VERSION)))
-    systemProperty("TEST_RELAY_URL", System.getenv("TEST_RELAY_URL"))
-    systemProperty("TEST_PROJECT_ID", System.getenv("TEST_PROJECT_ID"))
-    systemProperty("TEST_PROJECT_ID2", System.getenv("TEST_PROJECT_ID2"))
+    systemProperty("TEST_RELAY_URL", getLocalProperty("TEST_RELAY_URL"))
+    systemProperty("TEST_PROJECT_ID", getLocalProperty("TEST_PROJECT_ID"))
+    systemProperty("TEST_PROJECT_ID2", getLocalProperty("TEST_PROJECT_ID2"))
+}
+
+fun getLocalProperty(key: String, defValue: String = ""): String {
+    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
 }
 
 dependencies {

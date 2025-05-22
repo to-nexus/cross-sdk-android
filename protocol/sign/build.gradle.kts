@@ -1,4 +1,5 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import java.util.Properties
 
 plugins {
     id(libs.plugins.android.library.get().pluginId)
@@ -34,17 +35,17 @@ android {
         buildConfigField(
             "String",
             "PROJECT_ID",
-            "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\""
+            "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\""
         )
         buildConfigField(
             "String",
             "CROSS_PROJECT_ID",
-            "\"${getLocalProperty("CROSS_PROJECT_ID")}\""
+            "\"${getSecretProperty("CROSS_PROJECT_ID")}\""
         )
         buildConfigField(
             "Integer",
             "TEST_TIMEOUT_SECONDS",
-            "${System.getenv("TEST_TIMEOUT_SECONDS") ?: 10}"
+            getLocalProperty("TEST_TIMEOUT_SECONDS", "10")
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -95,6 +96,15 @@ android {
 
 fun getLocalProperty(key: String, defValue: String = ""): String {
     return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
+}
+
+fun getSecretProperty(key: String): String {
+    return System.getenv(key) ?: rootProject.file("secrets.properties").let { secretsFile ->
+        check(secretsFile.exists()) { "Secrets file not found at path: ${secretsFile.absolutePath}" }
+        Properties().apply {
+            load(secretsFile.inputStream())
+        }
+    }.getProperty(key)
 }
 
 sqldelight {

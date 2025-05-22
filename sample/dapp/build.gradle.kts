@@ -1,12 +1,12 @@
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import java.util.Properties
 
 plugins {
     id(libs.plugins.android.application.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
     id(libs.plugins.kotlin.parcelize.get().pluginId)
     id(libs.plugins.kotlin.kapt.get().pluginId)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.firebase.crashlytics)
+    //alias(libs.plugins.google.services)
+    //alias(libs.plugins.firebase.crashlytics)
     id("signing-config")
 }
 
@@ -24,29 +24,30 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("String", "BOM_VERSION", "\"${BOM_VERSION}\"")
     }
 
     buildTypes {
-        val params = "projectId=${getLocalProperty("WC_CLOUD_PROJECT_ID")}&crossProjectId=${getLocalProperty("CROSS_PROJECT_ID")}"
+        val appLink = "https://dev-cross-sdk-js.crosstoken.io"
+        val params = "projectId=${getSecretProperty("WC_CLOUD_PROJECT_ID")}&crossProjectId=${getSecretProperty("CROSS_PROJECT_ID")}"
 
         getByName("release") {
-            manifestPlaceholders["pathPrefix"] = "/dapp_release"
-            buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_release\"")
+            manifestPlaceholders["appLink"] = appLink
+            buildConfigField("String", "DAPP_APP_LINK", "\"$appLink\"")
             buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
         }
 
         getByName("internal") {
-            manifestPlaceholders["pathPrefix"] = "/dapp_internal"
-            buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_internal\"")
+            manifestPlaceholders["appLink"] = appLink
+            buildConfigField("String", "DAPP_APP_LINK", "\"$appLink\"")
             buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
         }
 
         getByName("debug") {
-            manifestPlaceholders["pathPrefix"] = "/dapp_debug"
-            buildConfigField("String", "DAPP_APP_LINK", "\"https://appkit-lab.reown.com/dapp_debug\"")
+            manifestPlaceholders["appLink"] = appLink
+            buildConfigField("String", "DAPP_APP_LINK", "\"$appLink\"")
             buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
         }
     }
@@ -74,8 +75,13 @@ android {
     }
 }
 
-fun getLocalProperty(key: String, defValue: String = ""): String {
-    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
+fun getSecretProperty(key: String): String {
+    return System.getenv(key) ?: rootProject.file("secrets.properties").let { secretsFile ->
+        check(secretsFile.exists()) { "Secrets file not found at path: ${secretsFile.absolutePath}" }
+        Properties().apply {
+            load(secretsFile.inputStream())
+        }
+    }.getProperty(key)
 }
 
 dependencies {
@@ -105,8 +111,8 @@ dependencies {
 
     implementation(libs.bundles.accompanist)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.bundles.firebase)
+    //implementation(platform(libs.firebase.bom))
+    //implementation(libs.bundles.firebase)
 
     debugImplementation(project(":core:android"))
     debugImplementation(project(":product:appkit"))

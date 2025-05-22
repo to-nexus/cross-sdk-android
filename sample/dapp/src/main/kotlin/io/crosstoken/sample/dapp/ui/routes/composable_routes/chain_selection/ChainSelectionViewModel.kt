@@ -2,8 +2,8 @@ package io.crosstoken.sample.dapp.ui.routes.composable_routes.chain_selection
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
+//import com.google.firebase.crashlytics.ktx.crashlytics
+//import com.google.firebase.ktx.Firebase
 import io.crosstoken.android.Core
 import io.crosstoken.android.CoreClient
 import io.crosstoken.sample.common.Chains
@@ -93,7 +93,7 @@ class ChainSelectionViewModel : ViewModel() {
                     _awaitingProposalSharedFlow.emit(false)
                 }
                 Timber.tag(tag(this)).e(error.throwable.stackTraceToString())
-                Firebase.crashlytics.recordException(error.throwable)
+                //Firebase.crashlytics.recordException(error.throwable)
                 onError(error.throwable.message ?: "Unknown error, please contact support")
             })
     }
@@ -138,14 +138,14 @@ class ChainSelectionViewModel : ViewModel() {
                             _awaitingProposalSharedFlow.emit(false)
                         }
                         Timber.tag(tag(this)).e(error.throwable.stackTraceToString())
-                        Firebase.crashlytics.recordException(error.throwable)
+                        //Firebase.crashlytics.recordException(error.throwable)
                         onError(error.throwable.message ?: "Unknown error, please contact support")
                     }
                 )
             }
 
         } catch (e: Exception) {
-            Firebase.crashlytics.recordException(e)
+            //Firebase.crashlytics.recordException(e)
             Timber.tag(tag(this)).e(e)
             onError(e.message ?: "Unknown error, please contact support")
         }

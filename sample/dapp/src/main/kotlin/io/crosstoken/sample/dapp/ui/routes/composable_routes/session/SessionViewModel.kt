@@ -2,8 +2,8 @@ package io.crosstoken.sample.dapp.ui.routes.composable_routes.session
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
+//import com.google.firebase.crashlytics.ktx.crashlytics
+//import com.google.firebase.ktx.Firebase
 import io.crosstoken.appkit.client.AppKit
 import io.crosstoken.appkit.client.Modal
 import io.crosstoken.appkit.client.models.Session
@@ -105,9 +105,13 @@ class SessionViewModel : ViewModel() {
                 },
                 onError = { throwable: Throwable ->
                     Timber.tag(tag(this)).e(throwable.stackTraceToString())
-                    Firebase.crashlytics.recordException(throwable)
+                    //Firebase.crashlytics.recordException(throwable)
                     viewModelScope.launch {
-                        _sessionEvents.emit(DappSampleEvents.DisconnectError(throwable.message ?: "Unknown error, please try again or contact support"))
+                        _sessionEvents.emit(
+                            DappSampleEvents.DisconnectError(
+                                throwable.message ?: "Unknown error, please try again or contact support"
+                            )
+                        )
                     }
                 })
 

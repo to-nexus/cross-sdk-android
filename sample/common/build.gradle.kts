@@ -1,4 +1,5 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import java.util.Properties
 
 plugins {
     id("com.android.library")
@@ -15,11 +16,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
-        buildConfigField("String", "MIX_PANEL", "\"${System.getenv("MIX_PANEL") ?: ""}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "MIX_PANEL", "\"${getLocalProperty("MIX_PANEL")}\"")
         buildConfigField("String", "BOM_VERSION", "\"$BOM_VERSION\"")
-        resValue("string", "sentry_dsn", System.getenv("SENTRY_DSN") ?: "")
+        resValue("string", "sentry_dsn", getLocalProperty("SENTRY_DSN"))
     }
 
     buildTypes {
@@ -50,6 +51,15 @@ android {
 
 fun getLocalProperty(key: String, defValue: String = ""): String {
     return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
+}
+
+fun getSecretProperty(key: String): String {
+    return System.getenv(key) ?: rootProject.file("secrets.properties").let { secretsFile ->
+        check(secretsFile.exists()) { "Secrets file not found at path: ${secretsFile.absolutePath}" }
+        Properties().apply {
+            load(secretsFile.inputStream())
+        }
+    }.getProperty(key)
 }
 
 dependencies {

@@ -1,6 +1,7 @@
 package io.crosstoken.android.internal.common.modal
 
 import android.content.Context
+import io.crosstoken.android.BuildConfig
 import io.crosstoken.android.internal.common.modal.data.model.Wallet
 import io.crosstoken.android.internal.common.modal.data.model.WalletAppData
 import io.crosstoken.android.internal.common.modal.data.model.WalletListing
@@ -51,29 +52,33 @@ private val wallets = listOf(
         webAppLink = null,
         linkMode = "",
         true
-    ),
-    Wallet(
-        id = "CrossWalletDebug",
-        name = "CROSSx (debug)",
-        homePage = "https://to.nexus",
-        imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
-        order = "2",
-        mobileLink = "crossx://",
-        playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet.debug",
-        webAppLink = null,
-        linkMode = "",
-        true
-    ),
-    Wallet(
-        id = "CrossWalletDev",
-        name = "CROSSx (dev)",
-        homePage = "https://to.nexus",
-        imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
-        order = "3",
-        mobileLink = "crossx://",
-        playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet.dev",
-        webAppLink = null,
-        linkMode = "",
-        true
     )
+).plus(
+    if (BuildConfig.DEBUG) listOf(
+        Wallet(
+            id = "CrossWalletDebug",
+            name = "CROSSx (debug)",
+            homePage = "https://to.nexus",
+            imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
+            order = "2",
+            mobileLink = "crossx://",
+            playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet.debug",
+            webAppLink = null,
+            linkMode = "",
+            true
+        ),
+        Wallet(
+            id = "CrossWalletDev",
+            name = "CROSSx (dev)",
+            homePage = "https://to.nexus",
+            imageUrl = "https://contents.crosstoken.io/img/CROSSx_AppIcon.png",
+            order = "3",
+            mobileLink = "crossx://",
+            playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet.dev",
+            webAppLink = null,
+            linkMode = "",
+            true
+        )
+    )
+    else emptyList()
 )

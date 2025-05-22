@@ -54,7 +54,7 @@ internal fun appKitModule(useRemote: Boolean = false) = module {
 
         single { get<Retrofit>(named(AndroidCommonDITags.APPKIT_RETROFIT)).create(AppKitService::class.java) }
 
-        single {
+        single<AppKitApiRepositoryInterface> {
             AppKitApiRepository(
                 web3ModalApiUrl = get(named(AndroidCommonDITags.WEB3MODAL_URL)),
                 appKitService = get(),

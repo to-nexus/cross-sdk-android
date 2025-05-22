@@ -1,11 +1,11 @@
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import java.util.Properties
 
 plugins {
     id(libs.plugins.android.application.get().pluginId)
     id(libs.plugins.kotlin.android.get().pluginId)
     id(libs.plugins.kotlin.kapt.get().pluginId)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.firebase.crashlytics)
+    //alias(libs.plugins.google.services)
+    //alias(libs.plugins.firebase.crashlytics)
     id("signing-config")
 }
 
@@ -23,26 +23,27 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("String", "BOM_VERSION", "\"${BOM_VERSION}\"")
     }
 
     buildTypes {
+        val appLink = "https://dev-cross-sdk-js.crosstoken.io"
+
         getByName("release") {
-            manifestPlaceholders["pathPrefix"] = "/lab_release"
-            buildConfigField("String", "LAB_APP_LINK", "\"https://appkit-lab.reown.com/lab_release\"")
+            manifestPlaceholders["appLink"] = appLink
+            buildConfigField("String", "LAB_APP_LINK", "\"$appLink\"")
         }
 
         getByName("internal") {
-            manifestPlaceholders["pathPrefix"] = "/lab_internal"
-            buildConfigField("String", "LAB_APP_LINK", "\"https://appkit-lab.reown.com/lab_internal\"")
-
+            manifestPlaceholders["appLink"] = appLink
+            buildConfigField("String", "LAB_APP_LINK", "\"$appLink\"")
         }
 
         getByName("debug") {
-            manifestPlaceholders["pathPrefix"] = "/lab_debug"
-            buildConfigField("String", "LAB_APP_LINK", "\"https://appkit-lab.reown.com/lab_debug\"")
+            manifestPlaceholders["appLink"] = appLink
+            buildConfigField("String", "LAB_APP_LINK", "\"$appLink\"")
         }
     }
 
@@ -70,16 +71,21 @@ android {
     }
 }
 
-fun getLocalProperty(key: String, defValue: String = ""): String {
-    return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
+fun getSecretProperty(key: String): String {
+    return System.getenv(key) ?: rootProject.file("secrets.properties").let { secretsFile ->
+        check(secretsFile.exists()) { "Secrets file not found at path: ${secretsFile.absolutePath}" }
+        Properties().apply {
+            load(secretsFile.inputStream())
+        }
+    }.getProperty(key)
 }
 
 dependencies {
     implementation(project(":sample:common"))
     implementation("androidx.compose.material:material-icons-core:1.7.1")
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.bundles.firebase)
+//    implementation(platform(libs.firebase.bom))
+//    implementation(libs.bundles.firebase)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

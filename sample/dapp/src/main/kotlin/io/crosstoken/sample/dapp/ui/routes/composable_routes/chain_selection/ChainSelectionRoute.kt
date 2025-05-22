@@ -246,7 +246,7 @@ private fun ChainSelectionScreen(
             )
             BlueButton(
                 text = "1-CA Link Mode (CROSSx)",
-                onClick = { onAuthenticateLinkMode(if (context.packageManager.isPackageInstalled(CROSS_WALLET_PACKAGE)) "https://lab.web3modal.com/wallet_release" else "") },
+                onClick = { onAuthenticateLinkMode(if (context.packageManager.isPackageInstalled(CROSS_WALLET_PACKAGE)) BuildConfig.DAPP_APP_LINK else "") },
                 modifier = Modifier
                     .padding(vertical = 10.dp)
                     .fillMaxWidth()

@@ -1,4 +1,5 @@
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import java.util.Properties
 
 plugins {
     id("com.android.library")
@@ -27,11 +28,11 @@ android {
         }
 
         buildConfigField(type = "String", name = "SDK_VERSION", value = "\"${requireNotNull(extra.get(KEY_PUBLISH_VERSION))}\"")
-        buildConfigField("String", "PROJECT_ID", "\"${getLocalProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getLocalProperty("CROSS_PROJECT_ID")}\"")
-        buildConfigField("String", "NOTIFY_INTEGRATION_TESTS_PROJECT_ID", "\"${System.getenv("NOTIFY_INTEGRATION_TESTS_PROJECT_ID") ?: ""}\"")
-        buildConfigField("String", "NOTIFY_INTEGRATION_TESTS_SECRET", "\"${System.getenv("NOTIFY_INTEGRATION_TESTS_SECRET") ?: ""}\"")
-        buildConfigField("Integer", "TEST_TIMEOUT_SECONDS", "${System.getenv("TEST_TIMEOUT_SECONDS") ?: 60}")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
+        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "NOTIFY_INTEGRATION_TESTS_PROJECT_ID", "\"${getLocalProperty("NOTIFY_INTEGRATION_TESTS_PROJECT_ID")}\"")
+        buildConfigField("String", "NOTIFY_INTEGRATION_TESTS_SECRET", "\"${getLocalProperty("NOTIFY_INTEGRATION_TESTS_SECRET")}\"")
+        buildConfigField("Integer", "TEST_TIMEOUT_SECONDS", getLocalProperty("TEST_TIMEOUT_SECONDS", "60"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments += mutableMapOf("clearPackageData" to "true")
@@ -76,6 +77,15 @@ android {
 
 fun getLocalProperty(key: String, defValue: String = ""): String {
     return System.getenv(key) ?: gradleLocalProperties(rootDir, providers).getProperty(key) ?: defValue
+}
+
+fun getSecretProperty(key: String): String {
+    return System.getenv(key) ?: rootProject.file("secrets.properties").let { secretsFile ->
+        check(secretsFile.exists()) { "Secrets file not found at path: ${secretsFile.absolutePath}" }
+        Properties().apply {
+            load(secretsFile.inputStream())
+        }
+    }.getProperty(key)
 }
 
 sqldelight {

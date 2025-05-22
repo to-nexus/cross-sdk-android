@@ -1,9 +1,9 @@
 package io.crosstoken.sample.modal
 
 import android.app.Application
-import com.google.firebase.appdistribution.FirebaseAppDistribution
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
+//import com.google.firebase.appdistribution.FirebaseAppDistribution
+//import com.google.firebase.crashlytics.ktx.crashlytics
+//import com.google.firebase.ktx.Firebase
 import io.crosstoken.android.Core
 import io.crosstoken.android.CoreClient
 import io.crosstoken.android.relay.ConnectionType
@@ -43,7 +43,7 @@ class AppKitApp : Application() {
 
         AppKit.initialize(Modal.Params.Init(core = CoreClient)) { error ->
             Timber.e(tag(this), error.throwable.stackTraceToString())
-            Firebase.crashlytics.recordException(error.throwable)
+            //Firebase.crashlytics.recordException(error.throwable)
         }
 
         AppKit.setChains(AppKitChainsPresets.ethChains.values.toList())
@@ -58,6 +58,6 @@ class AppKitApp : Application() {
         )
         AppKit.setAuthRequestParams(authParams)
 
-        FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
+        //FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
     }
 }

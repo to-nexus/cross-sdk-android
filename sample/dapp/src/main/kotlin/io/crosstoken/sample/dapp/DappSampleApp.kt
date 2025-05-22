@@ -1,9 +1,9 @@
 package io.crosstoken.sample.dapp
 
 import android.app.Application
-import com.google.firebase.appdistribution.FirebaseAppDistribution
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
+//import com.google.firebase.appdistribution.FirebaseAppDistribution
+//import com.google.firebase.crashlytics.ktx.crashlytics
+//import com.google.firebase.ktx.Firebase
 import io.crosstoken.android.Core
 import io.crosstoken.android.CoreClient
 import io.crosstoken.sample.common.tag
@@ -14,7 +14,6 @@ import io.crosstoken.appkit.client.Modal
 import io.crosstoken.appkit.presets.AppKitChainsPresets
 import io.crosstoken.appkit.utils.EthUtils
 import timber.log.Timber
-import io.crosstoken.sample.common.BuildConfig as CommonBuildConfig
 
 class DappSampleApp : Application() {
 
@@ -36,7 +35,7 @@ class DappSampleApp : Application() {
             relayServerUrl = BuildConfig.RELAY_SERVER_URL,
             metaData = appMetaData,
         ) {
-            Firebase.crashlytics.recordException(it.throwable)
+            //Firebase.crashlytics.recordException(it.throwable)
         }
 
         AppKit.initialize(Modal.Params.Init(core = CoreClient)) { error ->
@@ -55,6 +54,6 @@ class DappSampleApp : Application() {
 //        )
 //        AppKit.setAuthRequestParams(authParams)
 
-        FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
+        //FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
     }
 }

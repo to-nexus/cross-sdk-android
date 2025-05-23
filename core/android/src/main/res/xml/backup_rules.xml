@@ -14,5 +14,5 @@
         path="db_key_store.xml" />
     <exclude
         domain="database"
-        path="WalletConnectAndroidCore.db" />
+        path="CrossWCAndroidCore.db" />
 </full-backup-content>

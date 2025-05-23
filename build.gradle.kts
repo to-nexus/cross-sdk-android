@@ -39,7 +39,7 @@ allprojects {
 //    properties {
 //        properties(
 //            mapOf(
-//                "sonar.projectKey" to "Nexus_CrossWalletConnectKotlin",
+//                "sonar.projectKey" to "Nexus_CrossWCKotlin",
 //                "sonar.organization" to "nexus",
 //                "sonar.host.url" to "https://sonarcloud.io",
 //                "sonar.gradle.skipCompile" to true,

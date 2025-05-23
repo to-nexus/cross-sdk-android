@@ -1,6 +1,6 @@
-# **Cross WalletConnect Sign - Kotlin**
+# **Cross WC Sign - Kotlin**
 
-Kotlin implementation of Cross WalletConnect Sign protocol for Android applications.
+Kotlin implementation of Cross WC Sign protocol for Android applications.
 
 ![Maven Central](https://img.shields.io/maven-central/v/io.crosstoken/sign)
 

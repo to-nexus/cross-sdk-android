@@ -19,7 +19,7 @@ internal class AppKitCrossApiRepository(
         )
     }.filter { it.isInstalled })
 
-    override suspend fun getAnalyticsConfig(sdkType: String) = Result.success(true)
+    override suspend fun getAnalyticsConfig(sdkType: String) = Result.success(false)
 
     override suspend fun getWallets(
         sdkType: String,

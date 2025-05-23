@@ -1,4 +1,4 @@
-rootProject.name = "Cross WalletConnect SDK Android"
+rootProject.name = "Cross WC SDK Android"
 
 val excludedDirs = listOf(
     "undefined",
@@ -19,7 +19,7 @@ val rootModules = listOf("foundation")
 
 File(rootDir.path).listFiles { file -> file.isDirectory && file.name !in excludedDirs }?.forEach { childDir ->
     if (childDir.name !in rootModules) {
-        childDir.listFiles { dir -> dir.isDirectory && dir.name !in excludedDirs}?.forEach { moduleDir ->
+        childDir.listFiles { dir -> dir.isDirectory && dir.name !in excludedDirs }?.forEach { moduleDir ->
             val module = ":${moduleDir.parentFile.name}:${moduleDir.name}"
             include(module)
             project(module).projectDir = moduleDir

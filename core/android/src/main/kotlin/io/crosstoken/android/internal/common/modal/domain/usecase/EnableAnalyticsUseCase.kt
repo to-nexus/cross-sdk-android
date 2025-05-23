@@ -7,7 +7,7 @@ interface EnableAnalyticsUseCaseInterface {
     fun fetchAnalyticsConfig(): Boolean
 }
 
-internal class EnableAnalyticsUseCase(private val repository: /*AppKitApiRepository*/ AppKitApiRepositoryInterface) :
+internal class EnableAnalyticsUseCase(private val repository: AppKitApiRepositoryInterface) :
     EnableAnalyticsUseCaseInterface {
     override fun fetchAnalyticsConfig(): Boolean {
         return runBlocking {

@@ -22,11 +22,11 @@ class AppKitApp : Application() {
         super.onCreate()
 
         val appMetaData = Core.Model.AppMetaData(
-            name = "AppKit Lab Sample",
-            description = "Kotlin AppKit Lab Sample",
+            name = "Cross Sample Modal",
+            description = "Cross modal implementation",
             url = "https://to.nexus",
             icons = listOf("https://contents.crosstoken.io/wallet/token/images/CROSSx.svg"),
-            redirect = "kotlin-modal-wc://request",
+            redirect = "cross-modal://request",
             linkMode = true,
             appLink = BuildConfig.LAB_APP_LINK
         )
@@ -50,10 +50,10 @@ class AppKitApp : Application() {
 
         val authParams = Modal.Model.AuthPayloadParams(
             chains = AppKitChainsPresets.ethChains.values.toList().map { it.id },
-            domain = "sample.kotlin.modal",
-            uri = "https://web3inbox.com/all-apps",
+            domain = "sample.cross.modal",
+            uri = "https://to.nexus",
             nonce = randomBytes(12).bytesToHex(),
-            statement = "I accept the Terms of Service: https://yourDappDomain.com/",
+            statement = "I accept the Terms of Service: https://to.nexus",
             methods = EthUtils.ethMethods
         )
         AppKit.setAuthRequestParams(authParams)

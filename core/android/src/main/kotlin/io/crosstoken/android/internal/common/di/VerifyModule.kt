@@ -12,7 +12,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 
 @JvmSynthetic
 internal fun verifyModule() = module {
-    factory(named(AndroidCommonDITags.VERIFY_URL)) { "https://verify.walletconnect.org/" }
+    factory(named(AndroidCommonDITags.VERIFY_URL)) { "https://cross-verify.crosstoken.io/" }
 
     single(named(AndroidCommonDITags.VERIFY_RETROFIT)) {
         Retrofit.Builder()

@@ -50,7 +50,7 @@ private val wallets = listOf(
         mobileLink = "crossx://",
         playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet",
         webAppLink = null,
-        linkMode = "",
+        linkMode = null,
         true
     )
 ).plus(
@@ -64,7 +64,7 @@ private val wallets = listOf(
             mobileLink = "crossx://",
             playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet.debug",
             webAppLink = null,
-            linkMode = "",
+            linkMode = null,
             true
         ),
         Wallet(
@@ -76,7 +76,7 @@ private val wallets = listOf(
             mobileLink = "crossx://",
             playStore = "https://play.google.com/store/apps/details?id=com.nexus.crosswallet.dev",
             webAppLink = null,
-            linkMode = "",
+            linkMode = null,
             true
         )
     )

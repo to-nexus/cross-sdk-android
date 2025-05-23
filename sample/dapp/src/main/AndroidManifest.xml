@@ -48,8 +48,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="${appLink}"
-                    android:scheme="https" />
+                    android:scheme="https"
+                    android:host="${appLink}" />
             </intent-filter>
 
             <intent-filter>
@@ -58,8 +58,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="kotlin-dapp-wc" />
-                <data android:host="request" />
+                <data
+                    android:scheme="cross-dapp"
+                    android:host="request" />
             </intent-filter>
         </activity>
     </application>

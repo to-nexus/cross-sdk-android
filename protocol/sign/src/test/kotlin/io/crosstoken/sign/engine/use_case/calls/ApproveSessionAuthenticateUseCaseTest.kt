@@ -68,9 +68,9 @@ class ApproveSessionAuthenticateUseCaseTest {
         statement = "I accept the ServiceOrg Terms of Service: https://service.invalid/tos",
         requestId = null,
         resources =
-        listOf(
-            "urn:recap:eyJhdHQiOnsiZWlwMTU1Ijp7InJlcXVlc3QvcGVyc29uYWxfc2lnbiI6W3siY2hhaW5zIjpbImVpcDE1NToxIl19XSwicmVxdWVzdC9ldGhfc2lnblR5cGVkRGF0YV92NCI6W3siY2hhaW5zIjpbImVpcDE1NToxIl19XX19fQ"
-        )
+            listOf(
+                "urn:recap:eyJhdHQiOnsiZWlwMTU1Ijp7InJlcXVlc3QvcGVyc29uYWxfc2lnbiI6W3siY2hhaW5zIjpbImVpcDE1NToxIl19XSwicmVxdWVzdC9ldGhfc2lnblR5cGVkRGF0YV92NCI6W3siY2hhaW5zIjpbImVpcDE1NToxIl19XX19fQ"
+            )
     )
 
     @Before
@@ -109,7 +109,7 @@ class ApproveSessionAuthenticateUseCaseTest {
                 version = "v",
                 iat = "iat",
                 chains = listOf("eip155:1"),
-                domain = "sample.kotlin.dapp",
+                domain = "sample.cross.dapp",
                 nonce = randomBytes(12).bytesToHex(),
                 exp = null,
                 nbf = null,
@@ -183,7 +183,7 @@ class ApproveSessionAuthenticateUseCaseTest {
                 version = "v",
                 iat = "iat",
                 chains = listOf("chains"),
-                domain = "sample.kotlin.dapp",
+                domain = "sample.cross.dapp",
                 nonce = randomBytes(12).bytesToHex(),
                 exp = null,
                 nbf = null,
@@ -233,7 +233,7 @@ class ApproveSessionAuthenticateUseCaseTest {
                 version = "v",
                 iat = "iat",
                 chains = listOf("eip155:1"),
-                domain = "sample.kotlin.dapp",
+                domain = "sample.cross.dapp",
                 nonce = randomBytes(12).bytesToHex(),
                 exp = null,
                 nbf = null,

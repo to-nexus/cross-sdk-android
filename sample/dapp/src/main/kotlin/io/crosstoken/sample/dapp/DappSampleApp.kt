@@ -21,13 +21,12 @@ class DappSampleApp : Application() {
         super.onCreate()
 
         val appMetaData = Core.Model.AppMetaData(
-            name = "Kotlin Dapp",
-            description = "Kotlin Dapp Implementation",
+            name = "Cross Sample Dapp",
+            description = "Cross dapp implementation",
             url = "https://to.nexus",
             icons = listOf("https://contents.crosstoken.io/wallet/token/images/CROSSx.svg"),
-            redirect = "kotlin-dapp-wc://request",
+            redirect = "cross-dapp://request",
             appLink = BuildConfig.DAPP_APP_LINK,
-            linkMode = true
         )
 
         CoreClient.initialize(
@@ -46,10 +45,10 @@ class DappSampleApp : Application() {
 
 //        val authParams = Modal.Model.AuthPayloadParams(
 //            chains = AppKitChainsPresets.ethChains.values.toList().map { it.id },
-//            domain = "sample.kotlin.modal",
-//            uri = "https://web3inbox.com/all-apps",
+//            domain = "sample.cross.modal",
+//            uri = "https://to.nexus",
 //            nonce = randomBytes(12).bytesToHex(),
-//            statement = "I accept the Terms of Service: https://yourDappDomain.com/",
+//            statement = "I accept the Terms of Service: https://to.nexus",
 //            methods = EthUtils.ethMethods
 //        )
 //        AppKit.setAuthRequestParams(authParams)

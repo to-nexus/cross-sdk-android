@@ -197,8 +197,8 @@ class ChainSelectionViewModel : ViewModel() {
     val authenticateParams
         get() = Modal.Params.Authenticate(
             chains = uiState.value.filter { it.isSelected }.map { it.chainId },
-            domain = "sample.kotlin.dapp",
-            uri = "https://web3inbox.com/all-apps",
+            domain = "sample.cross.dapp",
+            uri = "https://to.nexus",
             nonce = randomBytes(12).bytesToHex(),
             exp = null,
             nbf = null,
@@ -215,8 +215,8 @@ class ChainSelectionViewModel : ViewModel() {
     val siweParams
         get() = Modal.Params.Authenticate(
             chains = uiState.value.filter { it.isSelected }.map { it.chainId },
-            domain = "sample.kotlin.dapp",
-            uri = "https://web3inbox.com/all-apps",
+            domain = "sample.cross.dapp",
+            uri = "https://to.nexus",
             nonce = randomBytes(12).bytesToHex(),
             exp = null,
             nbf = null,

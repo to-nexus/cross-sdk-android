@@ -98,7 +98,7 @@ class RejectSessionAuthenticateUseCaseTest {
                 version = "v",
                 iat = "iat",
                 chains = listOf("chains"),
-                domain = "sample.kotlin.dapp",
+                domain = "sample.cross.dapp",
                 nonce = randomBytes(12).bytesToHex(),
                 exp = null,
                 nbf = null,

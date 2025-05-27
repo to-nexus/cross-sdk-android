@@ -38,7 +38,7 @@ internal fun ShutdownReason.toRelay() =
 
 @JvmSynthetic
 internal fun RelayDTO.Subscription.Request.Params.SubscriptionData.toRelay() =
-    Relay.Model.Call.Subscription.Request.Params.SubscriptionData(topic.value, message, publishedAt, attestation, tag)
+    Relay.Model.Call.Subscription.Request.Params.SubscriptionData(topic.value, message, publishedAt ?: System.currentTimeMillis(), attestation, tag)
 
 @JvmSynthetic
 internal fun RelayDTO.Subscription.Request.Params.toRelay() =

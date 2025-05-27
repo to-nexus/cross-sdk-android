@@ -18,6 +18,7 @@ import io.crosstoken.util.randomBytes
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.params.KeyParameter
 import org.bouncycastle.crypto.params.ParametersWithIV
+import timber.log.Timber
 import java.nio.ByteBuffer
 
 /* Note:
@@ -37,6 +38,8 @@ internal class ChaChaPolyCodec(private val keyManagementRepository: KeyManagemen
         val input = payload.toByteArray(Charsets.UTF_8)
         val nonceBytes = randomBytes(NONCE_SIZE)
 
+        Timber.d("Encrypting payload: $payload")
+
         return when (envelopeType.id) {
             EnvelopeType.ZERO.id -> encryptEnvelopeType0(topic, nonceBytes, input, envelopeType)
             EnvelopeType.ONE.id -> encryptEnvelopeType1(participants, nonceBytes, input, envelopeType)
@@ -50,12 +53,14 @@ internal class ChaChaPolyCodec(private val keyManagementRepository: KeyManagemen
         MissingKeyException::class
     )
     override fun decrypt(topic: Topic, cipherText: ByteArray): String {
-        return when (val envelopeType = cipherText.envelopeType) {
+        val msg = when (val envelopeType = cipherText.envelopeType) {
             EnvelopeType.ZERO.id -> decryptType0(topic, cipherText)
             EnvelopeType.ONE.id -> decryptType1(cipherText, keyManagementRepository.getPublicKey(topic.getParticipantTag()))
             EnvelopeType.TWO.id -> decryptType2(cipherText)
             else -> throw UnknownEnvelopeTypeException("Decrypt; Unknown envelope type: $envelopeType")
         }
+        Timber.d("Decrypted payload: $msg")
+        return msg
     }
 
     private fun decryptType0(topic: Topic, encryptedPayloadBytes: ByteArray): String {

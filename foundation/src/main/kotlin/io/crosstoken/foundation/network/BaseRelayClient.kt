@@ -6,7 +6,6 @@ import io.crosstoken.foundation.common.model.Topic
 import io.crosstoken.foundation.common.model.Ttl
 import io.crosstoken.foundation.common.toRelay
 import io.crosstoken.foundation.common.toRelayEvent
-import io.crosstoken.foundation.di.FoundationDITags
 import io.crosstoken.foundation.di.foundationCommonModule
 import io.crosstoken.foundation.network.data.service.RelayService
 import io.crosstoken.foundation.network.model.Relay
@@ -14,7 +13,6 @@ import io.crosstoken.foundation.network.model.RelayDTO
 import io.crosstoken.foundation.util.Logger
 import io.crosstoken.foundation.util.scope
 import io.crosstoken.util.generateClientToServerId
-import com.squareup.moshi.Moshi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -79,13 +77,7 @@ abstract class BaseRelayClient : RelayInterface {
                 relayService.observeUnsubscribeError()
             )
                 .catch { exception -> logger.error(exception) }
-                .collect { result ->
-                    if (isLoggingEnabled) {
-                        println("Result: $result; timestamp: ${System.currentTimeMillis()}")
-                    }
-
-                    resultState.emit(result)
-                }
+                .collect { result -> resultState.emit(result) }
         }
     }
 
@@ -108,7 +100,10 @@ abstract class BaseRelayClient : RelayInterface {
 
     override val subscriptionRequest: Flow<Relay.Model.Call.Subscription.Request> by lazy {
         relayService.observeSubscriptionRequest()
-            .map { request -> request.toRelay() }
+            .map { request ->
+                printIn("RelayDTO.Subscription.", request)
+                request.toRelay()
+            }
             .onEach { relayRequest -> supervisorScope { publishSubscriptionAcknowledgement(relayRequest.id) } }
     }
 
@@ -123,8 +118,20 @@ abstract class BaseRelayClient : RelayInterface {
         connectAndCallRelay(
             onConnected = {
                 with(params) {
-                    val publishParams = RelayDTO.Publish.Request.Params(Topic(topic), message, Ttl(ttl), tag, prompt, correlationId, rpcMethods, chainId, txHashes, contractAddresses)
+                    val publishParams = RelayDTO.Publish.Request.Params(
+                        Topic(topic),
+                        message,
+                        Ttl(ttl),
+                        tag,
+                        prompt,
+                        correlationId,
+                        rpcMethods,
+                        chainId,
+                        txHashes,
+                        contractAddresses
+                    )
                     val publishRequest = RelayDTO.Publish.Request(id = id ?: generateClientToServerId(), params = publishParams)
+                    printOut("RelayDTO.Publish.", publishRequest)
                     observePublishResult(publishRequest.id, onResult)
                     relayService.publishRequest(publishRequest)
                 }
@@ -141,6 +148,7 @@ abstract class BaseRelayClient : RelayInterface {
                         .filterIsInstance<RelayDTO.Publish.Result>()
                         .filter { relayResult -> relayResult.id == id }
                         .first { publishResult ->
+                            printIn("RelayDTO.Publish.Result.", publishResult)
                             when (publishResult) {
                                 is RelayDTO.Publish.Result.Acknowledgement -> onResult(Result.success(publishResult.toRelay()))
                                 is RelayDTO.Publish.Result.JsonRpcError -> onResult(Result.failure(Throwable(publishResult.error.errorMessage)))
@@ -162,10 +170,9 @@ abstract class BaseRelayClient : RelayInterface {
     override fun subscribe(topic: String, id: Long?, onResult: (Result<Relay.Model.Call.Subscribe.Acknowledgement>) -> Unit) {
         connectAndCallRelay(
             onConnected = {
-                val subscribeRequest = RelayDTO.Subscribe.Request(id = id ?: generateClientToServerId(), params = RelayDTO.Subscribe.Request.Params(Topic(topic)))
-                if (isLoggingEnabled) {
-                    logger.log("Sending SubscribeRequest: $subscribeRequest;  timestamp: ${System.currentTimeMillis()}")
-                }
+                val subscribeRequest =
+                    RelayDTO.Subscribe.Request(id = id ?: generateClientToServerId(), params = RelayDTO.Subscribe.Request.Params(Topic(topic)))
+                printOut("RelayDTO.Subscribe.", subscribeRequest)
                 observeSubscribeResult(subscribeRequest.id, onResult)
                 relayService.subscribeRequest(subscribeRequest)
             },
@@ -177,14 +184,14 @@ abstract class BaseRelayClient : RelayInterface {
         scope.launch {
             try {
                 withTimeout(RESULT_TIMEOUT) {
-                    if (isLoggingEnabled) println("ObserveSubscribeResult: $id; timestamp: ${System.currentTimeMillis()}")
+                    //if (isLoggingEnabled) println("ObserveSubscribeResult: $id")
                     resultState
-                        .onEach { relayResult -> if (isLoggingEnabled) logger.log("SubscribeResult 1: $relayResult") }
+                        //.onEach { relayResult -> if (isLoggingEnabled) println("SubscribeResult 1: $relayResult") }
                         .filterIsInstance<RelayDTO.Subscribe.Result>()
-                        .onEach { relayResult -> if (isLoggingEnabled) logger.log("SubscribeResult 2: $relayResult") }
+                        //.onEach { relayResult -> if (isLoggingEnabled) println("SubscribeResult 2: $relayResult") }
                         .filter { relayResult -> relayResult.id == id }
                         .first { subscribeResult ->
-                            if (isLoggingEnabled) println("SubscribeResult 3: $subscribeResult")
+                            printIn("RelayDTO.Subscribe.Result.", subscribeResult)
                             when (subscribeResult) {
                                 is RelayDTO.Subscribe.Result.Acknowledgement -> onResult(Result.success(subscribeResult.toRelay()))
                                 is RelayDTO.Subscribe.Result.JsonRpcError -> onResult(Result.failure(Throwable(subscribeResult.error.errorMessage)))
@@ -208,7 +215,11 @@ abstract class BaseRelayClient : RelayInterface {
             onConnected = {
                 if (!unAckedTopics.containsAll(topics)) {
                     unAckedTopics.addAll(topics)
-                    val batchSubscribeRequest = RelayDTO.BatchSubscribe.Request(id = id ?: generateClientToServerId(), params = RelayDTO.BatchSubscribe.Request.Params(topics))
+                    val batchSubscribeRequest = RelayDTO.BatchSubscribe.Request(
+                        id = id ?: generateClientToServerId(),
+                        params = RelayDTO.BatchSubscribe.Request.Params(topics)
+                    )
+                    printOut("RelayDTO.BatchSubscribe.", batchSubscribeRequest)
                     observeBatchSubscribeResult(batchSubscribeRequest.id, topics, onResult)
                     relayService.batchSubscribeRequest(batchSubscribeRequest)
                 }
@@ -217,7 +228,11 @@ abstract class BaseRelayClient : RelayInterface {
         )
     }
 
-    private fun observeBatchSubscribeResult(id: Long, topics: List<String>, onResult: (Result<Relay.Model.Call.BatchSubscribe.Acknowledgement>) -> Unit) {
+    private fun observeBatchSubscribeResult(
+        id: Long,
+        topics: List<String>,
+        onResult: (Result<Relay.Model.Call.BatchSubscribe.Acknowledgement>) -> Unit
+    ) {
         scope.launch {
             try {
                 withTimeout(RESULT_TIMEOUT) {
@@ -226,6 +241,7 @@ abstract class BaseRelayClient : RelayInterface {
                         .onEach { if (unAckedTopics.isNotEmpty()) unAckedTopics.removeAll(topics) }
                         .filter { relayResult -> relayResult.id == id }
                         .first { batchSubscribeResult ->
+                            printIn("RelayDTO.BatchSubscribe.Result.", batchSubscribeResult)
                             when (batchSubscribeResult) {
                                 is RelayDTO.BatchSubscribe.Result.Acknowledgement -> onResult(Result.success(batchSubscribeResult.toRelay()))
                                 is RelayDTO.BatchSubscribe.Result.JsonRpcError -> onResult(Result.failure(Throwable(batchSubscribeResult.error.errorMessage)))
@@ -256,6 +272,7 @@ abstract class BaseRelayClient : RelayInterface {
                     id = id ?: generateClientToServerId(),
                     params = RelayDTO.Unsubscribe.Request.Params(Topic(topic), SubscriptionId(subscriptionId))
                 )
+                printOut("RelayDTO.Unsubscribe.", unsubscribeRequest)
 
                 observeUnsubscribeResult(unsubscribeRequest.id, onResult)
                 relayService.unsubscribeRequest(unsubscribeRequest)
@@ -272,6 +289,7 @@ abstract class BaseRelayClient : RelayInterface {
                         .filterIsInstance<RelayDTO.Unsubscribe.Result>()
                         .filter { relayResult -> relayResult.id == id }
                         .first { unsubscribeResult ->
+                            printIn("RelayDTO.Unsubscribe.Result.", unsubscribeResult)
                             when (unsubscribeResult) {
                                 is RelayDTO.Unsubscribe.Result.Acknowledgement -> onResult(Result.success(unsubscribeResult.toRelay()))
                                 is RelayDTO.Unsubscribe.Result.JsonRpcError -> onResult(Result.failure(Throwable(unsubscribeResult.error.errorMessage)))
@@ -381,6 +399,7 @@ abstract class BaseRelayClient : RelayInterface {
 
     private fun publishSubscriptionAcknowledgement(id: Long) {
         val publishRequest = RelayDTO.Subscription.Result.Acknowledgement(id = id, result = true)
+        printOut("RelayDTO.Subscription.Result.", publishRequest)
         relayService.publishSubscriptionAcknowledgement(publishRequest)
     }
 
@@ -393,6 +412,18 @@ abstract class BaseRelayClient : RelayInterface {
     private fun reset() {
         isConnecting = false
         retryCount = 0
+    }
+
+    private fun printOut(prefix: String, request: Any) {
+        if (isLoggingEnabled) {
+            println("WS --> $prefix$request")
+        }
+    }
+
+    private fun printIn(prefix: String, request: Any) {
+        if (isLoggingEnabled) {
+            println("WS <-- $prefix$request")
+        }
     }
 
     private companion object {

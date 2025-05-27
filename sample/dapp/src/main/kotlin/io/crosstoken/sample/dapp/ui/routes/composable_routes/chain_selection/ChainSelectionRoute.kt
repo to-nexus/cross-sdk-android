@@ -47,7 +47,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -59,7 +58,6 @@ import androidx.navigation.NavController
 import com.github.alexzhirkevich.customqrgenerator.QrData
 import com.github.alexzhirkevich.customqrgenerator.vector.QrCodeDrawable
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
-import io.crosstoken.android.utils.isPackageInstalled
 import io.crosstoken.appkit.ui.components.button.rememberAppKitState
 import io.crosstoken.appkit.ui.openAppKit
 import io.crosstoken.sample.common.Chains
@@ -71,7 +69,6 @@ import io.crosstoken.sample.common.ui.conditionalModifier
 import io.crosstoken.sample.common.ui.theme.PreviewTheme
 import io.crosstoken.sample.common.ui.themedColor
 import io.crosstoken.sample.common.ui.toColor
-import io.crosstoken.sample.dapp.BuildConfig
 import io.crosstoken.sample.dapp.ui.DappSampleEvents
 import io.crosstoken.sample.dapp.ui.routes.Route
 import kotlinx.coroutines.CoroutineDispatcher
@@ -101,10 +98,82 @@ fun ChainSelectionRoute(navController: NavController, dispatcher: CoroutineDispa
         onDialogDismiss = { pairingUri = PairingUri(uri = "", isReCaps = false) },
         onChainClick = viewModel::updateChainSelectState,
         onConnectClick = { onConnectClick(viewModel, navController, context) },
-        onAuthenticateClick = { onAuthenticate(viewModel, composableScope, dispatcher, context) { uri -> pairingUri = uri } },
-        onAuthenticateLinkMode = { appLink -> onAuthenticateLinkMode(viewModel, appLink, context, composableScope, dispatcher) },
+        onConnectWalletClick = { onConnectWalletClick(viewModel, context, composableScope, dispatcher) },
+        onConnectQRClick = { onConnectQRClick(viewModel, context, composableScope, dispatcher) { uri -> pairingUri = uri } },
         onAuthenticateSIWEClick = { onAuthenticateSIWE(viewModel, composableScope, dispatcher, context) { uri -> pairingUri = uri } }
     )
+}
+
+private fun onConnectClick(
+    viewModel: ChainSelectionViewModel,
+    navController: NavController,
+    context: Context
+) {
+    if (viewModel.isAnyChainSelected) {
+        navController.openAppKit()
+    } else {
+        Toast.makeText(context, "Please select a chain", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun onConnectWalletClick(
+    viewModel: ChainSelectionViewModel,
+    context: Context,
+    composableScope: CoroutineScope,
+    dispatcher: CoroutineDispatcher
+) {
+    if (viewModel.isAnyChainSelected) {
+        viewModel.connectToWallet(
+            onSuccess = { uri -> redirectToCrossWallet(uri, context, composableScope, dispatcher) },
+            onError = { error ->
+                composableScope.launch(dispatcher) {
+                    Toast.makeText(context, "Authenticate error: $error", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    } else {
+        composableScope.launch(dispatcher) {
+            Toast.makeText(context, "Please select a chain", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun redirectToCrossWallet(uri: String?, context: Context, composableScope: CoroutineScope, dispatcher: CoroutineDispatcher) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            val encoded = URLEncoder.encode(uri, "UTF-8")
+            data = "crossx://wc?uri=$encoded".toUri()
+            `package` = CROSS_WALLET_PACKAGE
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        composableScope.launch(dispatcher) {
+            Toast.makeText(context, "Please install Kotlin Sample Wallet", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun onConnectQRClick(
+    viewModel: ChainSelectionViewModel,
+    context: Context,
+    composableScope: CoroutineScope,
+    dispatcher: CoroutineDispatcher,
+    onSuccess: (PairingUri) -> Unit,
+) {
+    if (viewModel.isAnyChainSelected) {
+        viewModel.connectToWallet(
+            onSuccess = { uri -> onSuccess(PairingUri(uri, true)) },
+            onError = { error ->
+                composableScope.launch(dispatcher) {
+                    Toast.makeText(context, "Authenticate error: $error", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    } else {
+        composableScope.launch(dispatcher) {
+            Toast.makeText(context, "Please select a chain", Toast.LENGTH_SHORT).show()
+        }
+    }
 }
 
 private fun onAuthenticateSIWE(
@@ -130,86 +199,6 @@ private fun onAuthenticateSIWE(
     }
 }
 
-private fun onAuthenticateLinkMode(
-    viewModel: ChainSelectionViewModel,
-    appLink: String,
-    context: Context,
-    composableScope: CoroutineScope,
-    dispatcher: CoroutineDispatcher
-) {
-    if (appLink.isNotEmpty()) {
-        if (viewModel.isAnyChainSelected) {
-            viewModel.authenticate(
-                viewModel.authenticateParams,
-                appLink,
-                onAuthenticateSuccess = { uri -> onAuthenticateSuccess(uri, appLink, context, composableScope, dispatcher) },
-                onError = { error ->
-                    composableScope.launch(dispatcher) {
-                        Toast.makeText(context, "Authenticate error: $error", Toast.LENGTH_SHORT).show()
-                    }
-                })
-        } else {
-            composableScope.launch(dispatcher) {
-                Toast.makeText(context, "Please select a chain", Toast.LENGTH_SHORT).show()
-            }
-        }
-    } else {
-        composableScope.launch(dispatcher) {
-            Toast.makeText(context, "Wallet not installed", Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
-private fun onAuthenticateSuccess(
-    uri: String?,
-    appLink: String,
-    context: Context,
-    composableScope: CoroutineScope,
-    dispatcher: CoroutineDispatcher
-) {
-    if (uri != null) {
-        redirectToCrossWallet(uri, context, composableScope, dispatcher)
-    }
-}
-
-private fun redirectToCrossWallet(uri: String?, context: Context, composableScope: CoroutineScope, dispatcher: CoroutineDispatcher) {
-    try {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            val encoded = URLEncoder.encode(uri, "UTF-8")
-            data = "crossx://wc?uri=$encoded".toUri()
-            `package` = CROSS_WALLET_PACKAGE
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        composableScope.launch(dispatcher) {
-            Toast.makeText(context, "Please install Kotlin Sample Wallet", Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
-private fun onAuthenticate(
-    viewModel: ChainSelectionViewModel,
-    composableScope: CoroutineScope,
-    dispatcher: CoroutineDispatcher,
-    context: Context,
-    onSuccess: (PairingUri) -> Unit,
-) {
-    if (viewModel.isAnyChainSelected) {
-        viewModel.authenticate(
-            viewModel.authenticateParams,
-            onAuthenticateSuccess = { uri -> onSuccess(PairingUri(uri ?: "", true)) },
-            onError = { error ->
-                composableScope.launch(dispatcher) {
-                    Toast.makeText(context, "Authenticate error: $error", Toast.LENGTH_SHORT).show()
-                }
-            })
-    } else {
-        composableScope.launch(dispatcher) {
-            Toast.makeText(context, "Please select a chain", Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
 @Composable
 private fun ChainSelectionScreen(
     composableScope: CoroutineScope,
@@ -221,8 +210,8 @@ private fun ChainSelectionScreen(
     onDialogDismiss: () -> Unit,
     onChainClick: (Int, Boolean) -> Unit,
     onConnectClick: () -> Unit,
-    onAuthenticateLinkMode: (String) -> Unit,
-    onAuthenticateClick: () -> Unit,
+    onConnectWalletClick: () -> Unit,
+    onConnectQRClick: () -> Unit,
     onAuthenticateSIWEClick: () -> Unit
 ) {
     Box {
@@ -245,8 +234,8 @@ private fun ChainSelectionScreen(
                     .padding(horizontal = 16.dp),
             )
             BlueButton(
-                text = "1-CA Link Mode (CROSSx)",
-                onClick = { onAuthenticateLinkMode(if (context.packageManager.isPackageInstalled(CROSS_WALLET_PACKAGE)) BuildConfig.DAPP_APP_LINK else "") },
+                text = "Connect Wallet (CROSSx)",
+                onClick = onConnectWalletClick,
                 modifier = Modifier
                     .padding(vertical = 10.dp)
                     .fillMaxWidth()
@@ -254,14 +243,15 @@ private fun ChainSelectionScreen(
                     .padding(horizontal = 16.dp)
             )
             BlueButton(
-                text = "1-CA",
-                onClick = onAuthenticateClick,
+                text = "Connect via QR Code",
+                onClick = onConnectQRClick,
                 modifier = Modifier
                     .padding(vertical = 10.dp)
                     .fillMaxWidth()
                     .height(50.dp)
                     .padding(horizontal = 16.dp)
             )
+            /*
             BlueButton(
                 text = "1-CA (SIWE)",
                 onClick = onAuthenticateSIWEClick,
@@ -271,6 +261,7 @@ private fun ChainSelectionScreen(
                     .height(50.dp)
                     .padding(horizontal = 16.dp)
             )
+            */
         }
         if (awaitingState) {
             Loader()
@@ -283,7 +274,13 @@ private fun ChainSelectionScreen(
 }
 
 @Composable
-private fun QRDialog(composableScope: CoroutineScope, dispatcher: CoroutineDispatcher, pairingUri: PairingUri, onDismissRequest: () -> Unit, context: Context) {
+private fun QRDialog(
+    composableScope: CoroutineScope,
+    dispatcher: CoroutineDispatcher,
+    pairingUri: PairingUri,
+    onDismissRequest: () -> Unit,
+    context: Context
+) {
     val qrDrawable = generateQRCode(pairingUri.uri)
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
 
@@ -307,15 +304,6 @@ private fun QRDialog(composableScope: CoroutineScope, dispatcher: CoroutineDispa
                     )
                 } ?: Text("Error while generating QR code", modifier = Modifier.padding(16.dp))
                 Button(
-                    onClick = { onCrossWalletDeepLink(onDismissRequest, pairingUri, context, composableScope, dispatcher) },
-                    modifier = Modifier.padding(top = 16.dp)
-                ) {
-                    Text("Deep link to CROSSx")
-                }
-                if (pairingUri.isReCaps) {
-                    showReCapsButton(onDismissRequest, pairingUri, context, composableScope, dispatcher)
-                }
-                Button(
                     onClick = {
                         composableScope.launch(dispatcher) {
                             Toast.makeText(context, "URI copied to clipboard", Toast.LENGTH_SHORT).show()
@@ -334,65 +322,6 @@ private fun QRDialog(composableScope: CoroutineScope, dispatcher: CoroutineDispa
                     Text("Close")
                 }
             }
-        }
-    }
-}
-
-private fun onCrossWalletDeepLink(
-    onDismissRequest: () -> Unit,
-    pairingUri: PairingUri,
-    context: Context,
-    composableScope: CoroutineScope,
-    dispatcher: CoroutineDispatcher
-) {
-    onDismissRequest()
-    try {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            val encoded = URLEncoder.encode(pairingUri.uri, "UTF-8")
-            data = "crossx://wc?uri=$encoded".toUri()
-            `package` = CROSS_WALLET_PACKAGE
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        composableScope.launch(dispatcher) {
-            Toast.makeText(context, "Please install Kotlin Sample Wallet", Toast.LENGTH_SHORT).show()
-        }
-    }
-}
-
-@Composable
-private fun showReCapsButton(
-    onDismissRequest: () -> Unit,
-    pairingUri: PairingUri,
-    context: Context,
-    composableScope: CoroutineScope,
-    dispatcher: CoroutineDispatcher
-) {
-    Button(
-        onClick = { onDynamicSwitcher(onDismissRequest, pairingUri, context, composableScope, dispatcher) },
-        modifier = Modifier.padding(top = 16.dp)
-    ) {
-        Text("Dynamic Switcher Deeplink (TrustWallet)", textAlign = TextAlign.Center)
-    }
-}
-
-private fun onDynamicSwitcher(
-    onDismissRequest: () -> Unit,
-    pairingUri: PairingUri,
-    context: Context,
-    composableScope: CoroutineScope,
-    dispatcher: CoroutineDispatcher
-) {
-    onDismissRequest()
-    try {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            val encoded = URLEncoder.encode(pairingUri.uri, "UTF-8")
-            data = "trust://wc?uri=$encoded".toUri()
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        composableScope.launch(dispatcher) {
-            Toast.makeText(context, "Please install TrustWallet", Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -460,18 +389,6 @@ private fun handleSignEvents(
                 else -> Unit
             }
         }
-    }
-}
-
-private fun onConnectClick(
-    viewModel: ChainSelectionViewModel,
-    navController: NavController,
-    context: Context
-) {
-    if (viewModel.isAnyChainSelected) {
-        navController.openAppKit()
-    } else {
-        Toast.makeText(context, "Please select a chain", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -570,9 +487,9 @@ private fun ChainSelectionScreenPreview(@PreviewParameter(ChainSelectionStatePro
             onDialogDismiss = {},
             onChainClick = { _, _ -> },
             onConnectClick = {},
-            onAuthenticateClick = {},
-            onAuthenticateSIWEClick = {},
-            onAuthenticateLinkMode = {}
+            onConnectWalletClick = {},
+            onConnectQRClick = {},
+            onAuthenticateSIWEClick = {}
         )
     }
 }
@@ -580,7 +497,7 @@ private fun ChainSelectionScreenPreview(@PreviewParameter(ChainSelectionStatePro
 private class ChainSelectionStateProvider : PreviewParameterProvider<List<ChainSelectionUi>> {
     override val values: Sequence<List<ChainSelectionUi>>
         get() = sequenceOf(
-            Chains.values().map { it.toChainUiState() }
+            Chains.entries.map { it.toChainUiState() }
         )
 }
 

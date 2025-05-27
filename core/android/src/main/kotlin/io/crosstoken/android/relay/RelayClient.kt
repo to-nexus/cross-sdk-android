@@ -51,6 +51,8 @@ class RelayClient(private val koinApp: KoinApplication = wcKoinApp) : BaseRelayC
         collectConnectionInitializationErrors { error -> onError(error) }
         monitorConnectionState()
         observeResults()
+
+        isLoggingEnabled = true
     }
 
     private fun collectConnectionInitializationErrors(onError: (Throwable) -> Unit) {
@@ -83,7 +85,8 @@ class RelayClient(private val koinApp: KoinApplication = wcKoinApp) : BaseRelayC
                 _wssConnectionState.value = WSSConnectionState.Disconnected.ConnectionFailed(event.throwable.toWalletConnectException)
 
             event is Relay.Model.Event.OnConnectionClosed && _wssConnectionState.value is WSSConnectionState.Connected ->
-                _wssConnectionState.value = WSSConnectionState.Disconnected.ConnectionClosed("Connection closed: ${event.shutdownReason.reason} ${event.shutdownReason.code}")
+                _wssConnectionState.value =
+                    WSSConnectionState.Disconnected.ConnectionClosed("Connection closed: ${event.shutdownReason.reason} ${event.shutdownReason.code}")
         }
     }
 
@@ -112,7 +115,10 @@ class RelayClient(private val koinApp: KoinApplication = wcKoinApp) : BaseRelayC
         }
     }
 
-    @Deprecated("This has become deprecate in favor of the onError returning Core.Model.Error", replaceWith = ReplaceWith("this.connect(onErrorModel)"))
+    @Deprecated(
+        "This has become deprecate in favor of the onError returning Core.Model.Error",
+        replaceWith = ReplaceWith("this.connect(onErrorModel)")
+    )
     override fun connect(onErrorModel: (Core.Model.Error) -> Unit, onError: (String) -> Unit) {
         when (connectionType) {
             ConnectionType.AUTOMATIC -> onError(WRONG_CONNECTION_TYPE)
@@ -120,7 +126,10 @@ class RelayClient(private val koinApp: KoinApplication = wcKoinApp) : BaseRelayC
         }
     }
 
-    @Deprecated("This has become deprecate in favor of the onError returning Core.Model.Error", replaceWith = ReplaceWith("this.disconnect(onErrorModel)"))
+    @Deprecated(
+        "This has become deprecate in favor of the onError returning Core.Model.Error",
+        replaceWith = ReplaceWith("this.disconnect(onErrorModel)")
+    )
     override fun disconnect(onErrorModel: (Core.Model.Error) -> Unit, onError: (String) -> Unit) {
         when (connectionType) {
             ConnectionType.AUTOMATIC -> onError(WRONG_CONNECTION_TYPE)

@@ -60,17 +60,7 @@ enum class Chains(
         events = Info.Eth.defaultEvents,
         order = 1
     ),
-    ETHEREUM_MAIN(
-        chainName = "Ethereum",
-        chainNamespace = Info.Eth.chain,
-        chainReference = "1",
-        icon = R.drawable.ic_ethereum,
-        color = "#617de8",
-        methods = Info.Eth.defaultMethods,
-        events = Info.Eth.defaultEvents,
-        order = 2
-    ),
-    BNB(
+    BSC_MAIN(
         chainName = "BNB Smart Chain",
         chainNamespace = Info.Eth.chain,
         chainReference = "56",
@@ -78,18 +68,19 @@ enum class Chains(
         color = "#F3BA2F",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 3
+        order = 2
     ),
-    POLYGON_MATIC(
-        chainName = "Polygon Matic",
+
+    /*ETHEREUM_MAIN(
+        chainName = "Ethereum",
         chainNamespace = Info.Eth.chain,
-        chainReference = "137",
-        icon = R.drawable.ic_polygon,
-        color = "#8145e4",
+        chainReference = "1",
+        icon = R.drawable.ic_ethereum,
+        color = "#617de8",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 4
-    ),
+        order = 3
+    ),*/
     CROSS_TESTNET(
         chainName = "Cross Testnet",
         chainNamespace = Info.Eth.chain,
@@ -98,9 +89,10 @@ enum class Chains(
         color = "#ff20e2bb",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 5
+        order = 4
     ),
-    ETHEREUM_SEPOLIA(
+
+    /*ETHEREUM_SEPOLIA(
         chainName = "Ethereum Sepolia",
         chainNamespace = Info.Eth.chain,
         chainReference = "11155111",
@@ -108,37 +100,17 @@ enum class Chains(
         color = "#617de8",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 6
-    ),
-    POLYGON_MUMBAI(
-        chainName = "Polygon Mumbai",
+        order = 5
+    ),*/
+    BSC_TESTNET(
+        chainName = "BNB Smart Chain Testnet",
         chainNamespace = Info.Eth.chain,
-        chainReference = "80001",
-        icon = R.drawable.ic_polygon,
-        color = "#8145e4",
+        chainReference = "97",
+        icon = R.drawable.bnb,
+        color = "#F3BA2F",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 7
-    ),
-    COSMOS(
-        chainName = "Cosmos",
-        chainNamespace = Info.Cosmos.chain,
-        chainReference = "cosmoshub-4",
-        icon = R.drawable.ic_cosmos,
-        color = "#B2B2B2",
-        methods = Info.Cosmos.defaultMethods,
-        events = Info.Cosmos.defaultEvents,
-        order = 8
-    ),
-    SOLANA(
-        chainName = "Solana Mainnet",
-        chainNamespace = Info.Solana.chain,
-        chainReference = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
-        icon = R.drawable.ic_solana,
-        color = "#F3BA2F",
-        methods = Info.Solana.defaultMethods,
-        events = Info.Solana.defaultEvents,
-        order = 9
+        order = 6
     );
 
     sealed class Info {
@@ -150,19 +122,6 @@ enum class Chains(
             override val chain = "eip155"
             override val defaultEvents: List<String> = listOf("chainChanged", "accountsChanged")
             override val defaultMethods: List<String> = listOf("eth_sendTransaction", "personal_sign", "eth_sign", "eth_signTypedData")
-        }
-
-        object Cosmos : Info() {
-            override val chain = "cosmos"
-            override val defaultEvents: List<String> = listOf()
-            override val defaultMethods: List<String> = listOf("cosmos_signDirect", "cosmos_signAmino")
-        }
-
-        object Solana : Info() {
-            override val chain = "solana"
-            override val defaultEvents: List<String> = listOf()
-            override val defaultMethods: List<String> =
-                listOf("solana_signMessage", "solana_signTransaction", "solana_signAndSendTransaction", "solana_signAllTransactions")
         }
     }
 }

@@ -31,7 +31,7 @@ class ChainSelectionViewModel : ViewModel() {
     val awaitingSharedFlow = _awaitingProposalSharedFlow.asSharedFlow()
 
     private val chains: List<ChainSelectionUi> =
-        Chains.values().map { it.toChainUiState() }
+        Chains.entries.map { it.toChainUiState() }
 
     private val _uiState = MutableStateFlow(chains)
     val uiState = _uiState.asStateFlow()
@@ -154,7 +154,7 @@ class ChainSelectionViewModel : ViewModel() {
     private fun getNamespaces(): Map<String, Modal.Model.Namespace.Proposal> {
         val namespaces: Map<String, Modal.Model.Namespace.Proposal> =
             uiState.value
-                .filter { it.isSelected && it.chainId != Chains.POLYGON_MATIC.chainId && it.chainId != Chains.ETHEREUM_SEPOLIA.chainId }
+                .filter { it.isSelected && (it.chainId != Chains.CROSS_TESTNET.chainId && it.chainId != Chains.BSC_TESTNET.chainId /*&& it.chainId != Chains.ETHEREUM_SEPOLIA.chainId*/) }
                 .groupBy { it.chainNamespace }
                 .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
                     key to Modal.Model.Namespace.Proposal(
@@ -165,7 +165,7 @@ class ChainSelectionViewModel : ViewModel() {
                 }.toMap()
 
         val tmp = uiState.value
-            .filter { it.isSelected && it.chainId == Chains.ETHEREUM_SEPOLIA.chainId }
+            .filter { it.isSelected && (it.chainId == Chains.CROSS_TESTNET.chainId || it.chainId == Chains.BSC_TESTNET.chainId /*|| it.chainId == Chains.ETHEREUM_SEPOLIA.chainId*/) }
             .groupBy { it.chainId }
             .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
                 key to Modal.Model.Namespace.Proposal(
@@ -178,7 +178,7 @@ class ChainSelectionViewModel : ViewModel() {
     }
 
     private fun getOptionalNamespaces() = uiState.value
-        .filter { it.isSelected && it.chainId == Chains.POLYGON_MATIC.chainId }
+        .filter { it.isSelected && (it.chainId == Chains.CROSS_TESTNET.chainId || it.chainId == Chains.BSC_TESTNET.chainId /*|| it.chainId == Chains.ETHEREUM_SEPOLIA.chainId*/) }
         .groupBy { it.chainId }
         .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
             key to Modal.Model.Namespace.Proposal(

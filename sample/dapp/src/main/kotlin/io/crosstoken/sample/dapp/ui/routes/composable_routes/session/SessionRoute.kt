@@ -121,7 +121,7 @@ private fun SessionScreen(
     isPingLoading: Boolean,
 ) {
     Column {
-        WCTopAppBarLegacy(titleText = "Session Chains",)
+        WCTopAppBarLegacy(titleText = "Session Chains")
         ChainsAction(onPingClick, onDisconnectClick, isDisconnectLoading, isPingLoading)
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
@@ -247,7 +247,7 @@ private fun LazyItemScope.SessionChainItem(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth()
+                .fillMaxWidth(0.9f)
                 .background(Color.Gray)
                 .height(1.dp)
         )

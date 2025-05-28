@@ -90,18 +90,18 @@ internal val ethereumChain: Modal.Model.Chain
         blockExplorerUrl = "https://etherscan.io"
     )
 
-internal val arbitrumChain: Modal.Model.Chain
+internal val bscChain: Modal.Model.Chain
     get() = Modal.Model.Chain(
-        chainName = "Arbitrum One",
+        chainName = "BNB Smart Chain",
         chainNamespace = "eip155",
-        chainReference = "42161",
+        chainReference = "56",
         requiredMethods = listOf(),
         optionalMethods = listOf(),
         events = listOf(),
         token = ethToken,
-        rpcUrl = "https://arb1.arbitrum.io/rpc",
-        blockExplorerUrl = "https://arbiscan.io"
+        rpcUrl = "https://rpc.ankr.com/bsc",
+        blockExplorerUrl = "https://bscscan.com"
     )
 
 internal val testChains: List<Modal.Model.Chain>
-    get() = listOf(crossChain, ethereumChain, arbitrumChain)
+    get() = listOf(crossChain, ethereumChain, bscChain)

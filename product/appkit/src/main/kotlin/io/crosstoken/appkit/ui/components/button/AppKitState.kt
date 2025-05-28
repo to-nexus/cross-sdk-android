@@ -21,7 +21,7 @@ import io.crosstoken.appkit.engine.AppKitEngine
 import io.crosstoken.appkit.ui.components.ComponentDelegate
 import io.crosstoken.appkit.ui.components.ComponentEvent
 import io.crosstoken.appkit.ui.openAppKit
-import io.crosstoken.appkit.utils.getChainNetworkImageUrl
+import io.crosstoken.appkit.utils.getChainNetworkImage
 import io.crosstoken.appkit.utils.getChains
 import io.crosstoken.appkit.utils.getSelectedChain
 import kotlinx.coroutines.CoroutineScope
@@ -83,10 +83,37 @@ class AppKitState(
 
     private fun sendModalCloseOrOpenEvents(event: ComponentEvent) {
         when {
-            event.isOpen && isConnected.value -> sendEventUseCase.send(Props(EventType.TRACK, EventType.Track.MODAL_OPEN, Properties(connected = true)))
-            event.isOpen && !isConnected.value -> sendEventUseCase.send(Props(EventType.TRACK, EventType.Track.MODAL_OPEN, Properties(connected = false)))
-            !event.isOpen && isConnected.value -> sendEventUseCase.send(Props(EventType.TRACK, EventType.Track.MODAL_CLOSE, Properties(connected = true)))
-            !event.isOpen && !isConnected.value -> sendEventUseCase.send(Props(EventType.TRACK, EventType.Track.MODAL_CLOSE, Properties(connected = false)))
+            event.isOpen && isConnected.value -> sendEventUseCase.send(
+                Props(
+                    EventType.TRACK,
+                    EventType.Track.MODAL_OPEN,
+                    Properties(connected = true)
+                )
+            )
+
+            event.isOpen && !isConnected.value -> sendEventUseCase.send(
+                Props(
+                    EventType.TRACK,
+                    EventType.Track.MODAL_OPEN,
+                    Properties(connected = false)
+                )
+            )
+
+            !event.isOpen && isConnected.value -> sendEventUseCase.send(
+                Props(
+                    EventType.TRACK,
+                    EventType.Track.MODAL_CLOSE,
+                    Properties(connected = true)
+                )
+            )
+
+            !event.isOpen && !isConnected.value -> sendEventUseCase.send(
+                Props(
+                    EventType.TRACK,
+                    EventType.Track.MODAL_CLOSE,
+                    Properties(connected = false)
+                )
+            )
         }
     }
 
@@ -100,7 +127,7 @@ class AppKitState(
                 val balance = getBalance(selectedChain, address)
                 AccountButtonState.Mixed(
                     address = address,
-                    chainImage = selectedChain.chainImage ?: getChainNetworkImageUrl(selectedChain.chainReference),
+                    chainImage = selectedChain.chainImage ?: getChainNetworkImage(selectedChain.chainReference),
                     chainName = selectedChain.chainName,
                     balance = balance
                 )

@@ -25,7 +25,7 @@ class AppKitApp : Application() {
             name = "Cross Sample Modal",
             description = "Cross modal implementation",
             url = "https://to.nexus",
-            icons = listOf("https://contents.crosstoken.io/wallet/token/images/CROSSx.svg"),
+            icons = listOf("https://contents.crosstoken.io/img/CROSSx_AppIcon.png"),
             redirect = "cross-modal://request",
             linkMode = true,
             appLink = BuildConfig.LAB_APP_LINK
@@ -48,15 +48,15 @@ class AppKitApp : Application() {
 
         AppKit.setChains(AppKitChainsPresets.ethChains.values.toList())
 
-        val authParams = Modal.Model.AuthPayloadParams(
-            chains = AppKitChainsPresets.ethChains.values.toList().map { it.id },
-            domain = "sample.cross.modal",
-            uri = "https://to.nexus",
-            nonce = randomBytes(12).bytesToHex(),
-            statement = "I accept the Terms of Service: https://to.nexus",
-            methods = EthUtils.ethMethods
-        )
-        AppKit.setAuthRequestParams(authParams)
+//        val authParams = Modal.Model.AuthPayloadParams(
+//            chains = AppKitChainsPresets.ethChains.values.toList().map { it.id },
+//            domain = "sample.cross.modal",
+//            uri = "https://to.nexus",
+//            nonce = randomBytes(12).bytesToHex(),
+//            statement = "I accept the Terms of Service: https://to.nexus",
+//            methods = EthUtils.ethMethods
+//        )
+//        AppKit.setAuthRequestParams(authParams)
 
         //FirebaseAppDistribution.getInstance().updateIfNewReleaseAvailable()
     }

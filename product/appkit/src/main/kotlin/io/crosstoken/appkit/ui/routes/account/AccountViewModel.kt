@@ -63,7 +63,7 @@ internal class AccountViewModel : ViewModel(), Navigator by NavigatorImpl() {
         .map { activeSession ->
             if (activeSession != null) {
                 val chains = activeSession.getChains()
-                val identity = getIdentityUseCase(activeSession.address, activeSession.chain)
+                val identity = null; //getIdentityUseCase(activeSession.address, activeSession.chain)
                 accountData = AccountData(
                     address = activeSession.address, chains = chains, identity = identity
                 )

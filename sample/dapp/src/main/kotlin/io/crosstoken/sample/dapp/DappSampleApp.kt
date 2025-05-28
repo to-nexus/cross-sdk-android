@@ -24,7 +24,7 @@ class DappSampleApp : Application() {
             name = "Cross Sample Dapp",
             description = "Cross dapp implementation",
             url = "https://to.nexus",
-            icons = listOf("https://contents.crosstoken.io/wallet/token/images/CROSSx.svg"),
+            icons = listOf("https://contents.crosstoken.io/img/CROSSx_AppIcon.png"),
             redirect = "cross-dapp://request",
             appLink = BuildConfig.DAPP_APP_LINK,
         )

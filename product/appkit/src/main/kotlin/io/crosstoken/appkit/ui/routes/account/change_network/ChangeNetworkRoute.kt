@@ -24,7 +24,7 @@ import io.crosstoken.appkit.ui.previews.AppKitPreview
 import io.crosstoken.appkit.ui.previews.ethereumChain
 import io.crosstoken.appkit.ui.previews.testChains
 import io.crosstoken.appkit.ui.routes.account.AccountViewModel
-import io.crosstoken.appkit.utils.getChainNetworkImageUrl
+import io.crosstoken.appkit.utils.getChainNetworkImage
 
 @Composable
 internal fun ChangeNetworkRoute(
@@ -81,7 +81,7 @@ private fun ChainNetworkGrid(
                 ChainNetworkItem(
                     isSelected = item.id == selectedChain.id,
                     networkName = item.chainName,
-                    image = item.chainImage ?: getChainNetworkImageUrl(item.chainReference)
+                    image = item.chainImage ?: getChainNetworkImage(item.chainReference)
                 ) {
                     onItemClick(item)
                 }

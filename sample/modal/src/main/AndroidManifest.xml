@@ -89,7 +89,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="kotlin-modal-wc" />
+                <data android:scheme="cross-modal" />
                 <data android:host="request" />
             </intent-filter>
         </activity>

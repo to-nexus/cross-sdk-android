@@ -17,7 +17,6 @@ import io.crosstoken.appkit.client.Modal
 import io.crosstoken.appkit.client.models.Session
 import io.crosstoken.appkit.client.models.request.Request
 import io.crosstoken.sample.common.getGetWalletAssetsParams
-import io.crosstoken.sample.common.getSolanaSignAndSendParams
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -95,7 +94,6 @@ class AccountViewModel(
                     method.equals("eth_sign", true) -> getEthSignBody(account)
                     method.equals("eth_sendTransaction", true) -> getEthSendTransaction(account)
                     method.equals("eth_signTypedData", true) -> getEthSignTypedData(account)
-                    method.equals("solana_signAndSendTransaction", true) -> getSolanaSignAndSendParams()
                     else -> "[]"
                 }
                 val requestParams = Request(
@@ -103,7 +101,8 @@ class AccountViewModel(
                     params = params, // stringified JSON
                 )
 
-                AppKit.request(requestParams,
+                AppKit.request(
+                    requestParams,
                     onSuccess = { _ ->
                         println("AppKit request success: $method")
                     },
@@ -124,7 +123,7 @@ class AccountViewModel(
 
     fun fetchAccountDetails() {
         val (chainNamespace, chainReference, account) = selectedAccountInfo.split(":")
-        val chainDetails = Chains.values().first {
+        val chainDetails = Chains.entries.first {
             it.chainNamespace == chainNamespace && it.chainReference == chainReference
         }
 

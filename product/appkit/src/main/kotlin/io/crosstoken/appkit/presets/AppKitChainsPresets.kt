@@ -8,19 +8,8 @@ object AppKitChainsPresets {
     val ethToken = Modal.Model.Token(name = "Ether", symbol = "ETH", decimal = 18)
 
     val ethChains: Map<String, Modal.Model.Chain> = mapOf(
-        "612044" to Modal.Model.Chain(
-            chainName = "Cross Testnet",
-            chainNamespace = "eip155",
-            chainReference = "612044",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = crossToken,
-            rpcUrl = "https://testnet.crosstoken.io:22001",
-            blockExplorerUrl = "https://testnet.crossscan.io"
-        ),
         "612055" to Modal.Model.Chain(
-            chainName = "Cross Mainnet",
+            chainName = "Cross",
             chainNamespace = "eip155",
             chainReference = "612055",
             requiredMethods = EthUtils.ethRequiredMethods,
@@ -30,60 +19,16 @@ object AppKitChainsPresets {
             rpcUrl = "https://mainnet.crosstoken.io:22001",
             blockExplorerUrl = "https://mainnet.crossscan.io"
         ),
-        "1" to Modal.Model.Chain(
-            chainName = "Ethereum",
+        "612044" to Modal.Model.Chain(
+            chainName = "Cross ZoneZero",
             chainNamespace = "eip155",
-            chainReference = "1",
+            chainReference = "612044",
             requiredMethods = EthUtils.ethRequiredMethods,
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
-            token = ethToken,
-            rpcUrl = "https://cloudflare-eth.com",
-            blockExplorerUrl = "https://etherscan.io"
-        ),
-        "111155111" to Modal.Model.Chain(
-            chainName = "Ethereum Sepolia",
-            chainNamespace = "eip155",
-            chainReference = "11155111",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = ethToken,
-            rpcUrl = "https://rpc.sepolia.dev",
-            blockExplorerUrl = "https://sepolia.etherscan.io/"
-        ),
-        "42161" to Modal.Model.Chain(
-            chainName = "Arbitrum One",
-            chainNamespace = "eip155",
-            chainReference = "42161",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = ethToken,
-            rpcUrl = "https://arb1.arbitrum.io/rpc",
-            blockExplorerUrl = "https://arbiscan.io"
-        ),
-        "137" to Modal.Model.Chain(
-            chainName = "Polygon",
-            chainNamespace = "eip155",
-            chainReference = "137",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = Modal.Model.Token("MATIC", "MATIC", 18),
-            rpcUrl = "https://polygon-rpc.com",
-            blockExplorerUrl = "https://polygonscan.com"
-        ),
-        "43114" to Modal.Model.Chain(
-            chainName = "Avalanche",
-            chainNamespace = "eip155",
-            chainReference = "43114",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = Modal.Model.Token("Avalanche", "AVAX", 18),
-            rpcUrl = "https://api.avax.network/ext/bc/C/rpc",
-            blockExplorerUrl = "https://snowtrace.io"
+            token = crossToken,
+            rpcUrl = "https://testnet.crosstoken.io:22001",
+            blockExplorerUrl = "https://testnet.crossscan.io"
         ),
         "56" to Modal.Model.Chain(
             chainName = "BNB Smart Chain",
@@ -96,82 +41,38 @@ object AppKitChainsPresets {
             rpcUrl = "https://rpc.ankr.com/bsc",
             blockExplorerUrl = "https://bscscan.com"
         ),
-        "10" to Modal.Model.Chain(
-            chainName = "OP Mainnet",
+        "97" to Modal.Model.Chain(
+            chainName = "BNB Smart Chain Testnet",
             chainNamespace = "eip155",
-            chainReference = "10",
+            chainReference = "97",
+            requiredMethods = EthUtils.ethRequiredMethods,
+            optionalMethods = EthUtils.ethOptionalMethods,
+            events = EthUtils.ethEvents,
+            token = Modal.Model.Token("tBNB", "tBNB", 18),
+            rpcUrl = "https://bsc-testnet-rpc.publicnode.com",
+            blockExplorerUrl = "https://testnet.bscscan.com"
+        ),
+        "1" to Modal.Model.Chain(
+            chainName = "Ethereum",
+            chainNamespace = "eip155",
+            chainReference = "1",
             requiredMethods = EthUtils.ethRequiredMethods,
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = ethToken,
-            rpcUrl = "https://mainnet.optimism.io",
-            blockExplorerUrl = "https://explorer.optimism.io"
+            rpcUrl = "https://cloudflare-eth.com",
+            blockExplorerUrl = "https://etherscan.io"
         ),
-        "100" to Modal.Model.Chain(
-            chainName = "Gnosis",
+        "11155111" to Modal.Model.Chain(
+            chainName = "Ethereum Sepolia",
             chainNamespace = "eip155",
-            chainReference = "100",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = Modal.Model.Token("Gnosis", "xDAI", 18),
-            rpcUrl = "https://rpc.gnosischain.com",
-            blockExplorerUrl = "https://blockscout.com/xdai/mainnet"
-        ),
-        "324" to Modal.Model.Chain(
-            chainName = "zkSync Era",
-            chainNamespace = "eip155",
-            chainReference = "324",
+            chainReference = "11155111",
             requiredMethods = EthUtils.ethRequiredMethods,
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = ethToken,
-            rpcUrl = "https://mainnet.era.zksync.io",
-            blockExplorerUrl = "https://explorer.zksync.io"
-        ),
-        "7777777" to Modal.Model.Chain(
-            chainName = "Zora",
-            chainNamespace = "eip155",
-            chainReference = "7777777",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = ethToken,
-            rpcUrl = "https://rpc.zora.energy",
-            blockExplorerUrl = "https://explorer.zora.energy"
-        ),
-        "8453" to Modal.Model.Chain(
-            chainName = "Base",
-            chainNamespace = "eip155",
-            chainReference = "8453",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = ethToken,
-            rpcUrl = "https://mainnet.base.org",
-            blockExplorerUrl = "https://basescan.org"
-        ),
-        "42220" to Modal.Model.Chain(
-            chainName = "Celo",
-            chainNamespace = "eip155",
-            chainReference = "42220",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = Modal.Model.Token("CELO", "CELO", 18),
-            rpcUrl = "https://forno.celo.org",
-            blockExplorerUrl = "https://explorer.celo.org/mainnet"
-        ),
-        "1313161554" to Modal.Model.Chain(
-            chainName = "Aurora",
-            chainNamespace = "eip155",
-            chainReference = "1313161554",
-            requiredMethods = EthUtils.ethRequiredMethods,
-            optionalMethods = EthUtils.ethOptionalMethods,
-            events = EthUtils.ethEvents,
-            token = ethToken,
-            rpcUrl = "https://mainnet.aurora.dev",
-            blockExplorerUrl = "https://aurorascan.dev"
-        ),
+            rpcUrl = "https://rpc.sepolia.dev",
+            blockExplorerUrl = "https://sepolia.etherscan.io/"
+        )
     )
 }

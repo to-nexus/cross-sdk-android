@@ -27,10 +27,6 @@ fun getEthSignTypedData(account: String): String {
     return "[\"$account\",\"$stringifiedParams\"]"
 }
 
-fun getSolanaSignAndSendParams(): String {
-    return "{\"transaction\":\"4hXTCkRzt9WyecNzV1XPgCDfGAZzQKNxLXgynz5QDuWWPSAZBZSHptvWRL3BjCvzUXRdKvHL2b7yGrRQcWyaqsaBCncVG7BFggS8w9snUts67BSh3EqKpXLUm5UMHfD7ZBe9GhARjbNQMLJ1QD3Spr6oMTBU6EhdB4RD8CP2xUxr2u3d6fos36PD98XS6oX8TQjLpsMwncs5DAMiD4nNnR8NBfyghGCWvCVifVwvA8B8TJxE1aiyiv2L429BCWfyzAme5sZW8rDb14NeCQHhZbtNqfXhcp2tAnaAT\",\"sendOptions\": {\"skipPreflight\":true,\"preflightCommitment\":\"confirmed\",\"maxRetries\":2,\"minContextSlot\"?:1}}"
-}
-
 fun getGetWalletAssetsParams(account: String): String {
     return JSONObject()
         .put("account", account)
@@ -81,8 +77,8 @@ enum class Chains(
         events = Info.Eth.defaultEvents,
         order = 3
     ),*/
-    CROSS_TESTNET(
-        chainName = "Cross Testnet",
+    CROSS_ZONEZERO(
+        chainName = "Cross ZoneZero",
         chainNamespace = Info.Eth.chain,
         chainReference = "612044",
         icon = R.drawable.ic_cross,

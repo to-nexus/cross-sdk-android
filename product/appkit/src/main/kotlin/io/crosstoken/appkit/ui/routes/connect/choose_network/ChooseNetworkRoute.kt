@@ -18,7 +18,7 @@ import io.crosstoken.appkit.client.AppKit
 import io.crosstoken.appkit.ui.components.internal.commons.NetworkBottomSection
 import io.crosstoken.appkit.ui.components.internal.commons.network.ChainNetworkItem
 import io.crosstoken.appkit.ui.routes.connect.ConnectViewModel
-import io.crosstoken.appkit.utils.getChainNetworkImageUrl
+import io.crosstoken.appkit.utils.getChainNetworkImage
 
 @Composable
 internal fun ChooseNetworkRoute(
@@ -71,7 +71,7 @@ private fun ChainNetworkGrid(
         content = {
             itemsIndexed(chains) { _, item ->
                 ChainNetworkItem(
-                    image = item.chainImage ?: getChainNetworkImageUrl(item.chainReference),
+                    image = item.chainImage ?: getChainNetworkImage(item.chainReference),
                     isSelected = item.id == selectedChain?.id,
                     isEnabled = true,
                     networkName = item.chainName,

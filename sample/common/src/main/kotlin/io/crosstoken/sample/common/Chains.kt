@@ -3,11 +3,13 @@ package io.crosstoken.sample.common
 import androidx.annotation.DrawableRes
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
 
 fun getPersonalSignBody(account: String): String {
     val msg = "My email is john@doe.com - ${System.currentTimeMillis()}".encodeToByteArray()
         .joinToString(separator = "", prefix = "0x") { eachByte -> "%02x".format(eachByte) }
-    return "[\"$msg\", \"$account\"]"
+    val customData = """{"metadata":"This is metadata for signed message"}"""
+    return "[\"$msg\", \"$account\", $customData]"
 }
 
 fun getEthSignBody(account: String): String {
@@ -17,7 +19,17 @@ fun getEthSignBody(account: String): String {
 }
 
 fun getEthSendTransaction(account: String): String {
-    return "[{\"from\":\"$account\",\"to\":\"0x70012948c348CBF00806A3C79E3c5DAdFaAa347B\",\"data\":\"0x\",\"gasLimit\":\"0x5208\",\"gasPrice\":\"0x0649534e00\",\"value\":\"0\",\"nonce\":\"0x07\"}]"
+    val customData = """
+        {
+        "metadata":{
+        "activity":"You are about to send custom transaction to the contract.",
+        "currentFormat":"This is a JSON formatted custom data.",
+        "providedFormat":"Plain text(string), HTML(string), JSON(key value object) are supported.",
+        "txTime":"${System.currentTimeMillis()}",
+        "randomValue":"0x${ByteArray(12).apply { SecureRandom().nextBytes(this) }.joinToString("") { "%02x".format(it) }}"
+        }
+        }""".trimIndent().replace("\n", "")
+    return "[{\"from\":\"$account\",\"to\":\"0x70012948c348CBF00806A3C79E3c5DAdFaAa347B\",\"data\":\"0x\",\"gasLimit\":\"0x5208\",\"gasPrice\":\"0x0649534e00\",\"value\":\"0\",\"nonce\":\"0x07\"}, $customData]"
 }
 
 fun getEthSignTypedData(account: String): String {

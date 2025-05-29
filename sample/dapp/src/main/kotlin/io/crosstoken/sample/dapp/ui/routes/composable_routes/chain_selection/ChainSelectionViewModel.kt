@@ -151,41 +151,18 @@ class ChainSelectionViewModel : ViewModel() {
         }
     }
 
-    private fun getNamespaces(): Map<String, Modal.Model.Namespace.Proposal> {
-        val namespaces: Map<String, Modal.Model.Namespace.Proposal> =
-            uiState.value
-                .filter { it.isSelected && (it.chainId != Chains.CROSS_ZONEZERO.chainId && it.chainId != Chains.BSC_TESTNET.chainId /*&& it.chainId != Chains.ETHEREUM_SEPOLIA.chainId*/) }
-                .groupBy { it.chainNamespace }
-                .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
-                    key to Modal.Model.Namespace.Proposal(
-                        chains = selectedChains.map { it.chainId }, //OR uncomment if chainId is an index
-                        methods = selectedChains.flatMap { it.methods }.distinct(),
-                        events = selectedChains.flatMap { it.events }.distinct()
-                    )
-                }.toMap()
-
-        val tmp = uiState.value
-            .filter { it.isSelected && (it.chainId == Chains.CROSS_ZONEZERO.chainId || it.chainId == Chains.BSC_TESTNET.chainId /*|| it.chainId == Chains.ETHEREUM_SEPOLIA.chainId*/) }
-            .groupBy { it.chainId }
-            .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
-                key to Modal.Model.Namespace.Proposal(
-                    methods = selectedChains.flatMap { it.methods }.distinct(),
-                    events = selectedChains.flatMap { it.events }.distinct()
-                )
-            }.toMap()
-
-        return namespaces.toMutableMap().plus(tmp)
-    }
-
-    private fun getOptionalNamespaces() = uiState.value
-        .filter { it.isSelected && (it.chainId == Chains.CROSS_ZONEZERO.chainId || it.chainId == Chains.BSC_TESTNET.chainId /*|| it.chainId == Chains.ETHEREUM_SEPOLIA.chainId*/) }
-        .groupBy { it.chainId }
+    private fun getNamespaces(): Map<String, Modal.Model.Namespace.Proposal> = uiState.value
+        .filter { it.isSelected }
+        .groupBy { it.chainNamespace }
         .map { (key: String, selectedChains: List<ChainSelectionUi>) ->
             key to Modal.Model.Namespace.Proposal(
+                chains = selectedChains.map { it.chainId }, //OR uncomment if chainId is an index
                 methods = selectedChains.flatMap { it.methods }.distinct(),
                 events = selectedChains.flatMap { it.events }.distinct()
             )
         }.toMap()
+
+    private fun getOptionalNamespaces(): Map<String, Modal.Model.Namespace.Proposal> = emptyMap()
 
     private fun getProperties(): Map<String, String> {
         //note: this property is not used in the SDK, only for demonstration purposes

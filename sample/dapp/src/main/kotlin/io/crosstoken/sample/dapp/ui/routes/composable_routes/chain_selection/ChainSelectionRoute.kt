@@ -69,6 +69,7 @@ import io.crosstoken.sample.common.ui.conditionalModifier
 import io.crosstoken.sample.common.ui.theme.PreviewTheme
 import io.crosstoken.sample.common.ui.themedColor
 import io.crosstoken.sample.common.ui.toColor
+import io.crosstoken.sample.dapp.BuildConfig
 import io.crosstoken.sample.dapp.ui.DappSampleEvents
 import io.crosstoken.sample.dapp.ui.routes.Route
 import kotlinx.coroutines.CoroutineDispatcher
@@ -501,7 +502,7 @@ private class ChainSelectionStateProvider : PreviewParameterProvider<List<ChainS
         )
 }
 
-private const val CROSS_WALLET_PACKAGE = "com.nexus.crosswallet.dev"
+private val CROSS_WALLET_PACKAGE = if (BuildConfig.DEBUG) "com.nexus.crosswallet.dev" else "com.nexus.crosswallet"
 
 data class PairingUri(
     val uri: String,

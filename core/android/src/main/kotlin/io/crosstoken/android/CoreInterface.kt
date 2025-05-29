@@ -1,7 +1,7 @@
 package io.crosstoken.android
 
 import android.app.Application
-import io.crosstoken.android.internal.common.explorer.ExplorerInterface
+//import io.crosstoken.android.internal.common.explorer.ExplorerInterface
 import io.crosstoken.android.pairing.client.PairingInterface
 import io.crosstoken.android.pairing.handler.PairingControllerInterface
 import io.crosstoken.android.push.PushInterface
@@ -16,7 +16,7 @@ interface CoreInterface {
     val Relay: RelayConnectionInterface
     val Push: PushInterface
     val Verify: VerifyInterface
-    val Explorer: ExplorerInterface
+    //val Explorer: ExplorerInterface
 
     interface Delegate : PairingInterface.Delegate
 
@@ -28,22 +28,17 @@ interface CoreInterface {
         connectionType: ConnectionType = ConnectionType.AUTOMATIC,
         application: Application,
         relay: RelayConnectionInterface? = null,
-        keyServerUrl: String? = null,
         networkClientTimeout: NetworkClientTimeout? = null,
-        telemetryEnabled: Boolean = false,
         onError: (Core.Model.Error) -> Unit,
     )
 
     fun initialize(
         application: Application,
         projectId: String,
-        crossProjectId: String,
         metaData: Core.Model.AppMetaData,
         connectionType: ConnectionType = ConnectionType.AUTOMATIC,
         relay: RelayConnectionInterface? = null,
-        keyServerUrl: String? = null,
         networkClientTimeout: NetworkClientTimeout? = null,
-        telemetryEnabled: Boolean = false,
         onError: (Core.Model.Error) -> Unit,
     )
 }

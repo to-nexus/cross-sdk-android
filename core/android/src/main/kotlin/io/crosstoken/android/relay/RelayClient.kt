@@ -114,26 +114,4 @@ class RelayClient(private val koinApp: KoinApplication = wcKoinApp) : BaseRelayC
             onError(Core.Model.Error(e))
         }
     }
-
-    @Deprecated(
-        "This has become deprecate in favor of the onError returning Core.Model.Error",
-        replaceWith = ReplaceWith("this.connect(onErrorModel)")
-    )
-    override fun connect(onErrorModel: (Core.Model.Error) -> Unit, onError: (String) -> Unit) {
-        when (connectionType) {
-            ConnectionType.AUTOMATIC -> onError(WRONG_CONNECTION_TYPE)
-            ConnectionType.MANUAL -> manualConnection.connect()
-        }
-    }
-
-    @Deprecated(
-        "This has become deprecate in favor of the onError returning Core.Model.Error",
-        replaceWith = ReplaceWith("this.disconnect(onErrorModel)")
-    )
-    override fun disconnect(onErrorModel: (Core.Model.Error) -> Unit, onError: (String) -> Unit) {
-        when (connectionType) {
-            ConnectionType.AUTOMATIC -> onError(WRONG_CONNECTION_TYPE)
-            ConnectionType.MANUAL -> manualConnection.disconnect()
-        }
-    }
 }

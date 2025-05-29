@@ -1,6 +1,7 @@
 package io.crosstoken.appkit.presets
 
 import io.crosstoken.appkit.client.Modal
+import io.crosstoken.appkit.R
 import io.crosstoken.appkit.utils.EthUtils
 
 object AppKitChainsPresets {
@@ -16,6 +17,7 @@ object AppKitChainsPresets {
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = crossToken,
+            chainImage = Modal.Model.ChainImage.Asset(R.drawable.cross_green),
             rpcUrl = "https://mainnet.crosstoken.io:22001",
             blockExplorerUrl = "https://mainnet.crossscan.io"
         ),
@@ -27,6 +29,7 @@ object AppKitChainsPresets {
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = crossToken,
+            chainImage = Modal.Model.ChainImage.Asset(R.drawable.cross_green),
             rpcUrl = "https://testnet.crosstoken.io:22001",
             blockExplorerUrl = "https://testnet.crossscan.io"
         ),
@@ -38,6 +41,7 @@ object AppKitChainsPresets {
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = Modal.Model.Token("BNB", "BNB", 18),
+            chainImage = Modal.Model.ChainImage.Asset(R.drawable.bnb),
             rpcUrl = "https://rpc.ankr.com/bsc",
             blockExplorerUrl = "https://bscscan.com"
         ),
@@ -49,6 +53,7 @@ object AppKitChainsPresets {
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = Modal.Model.Token("tBNB", "tBNB", 18),
+            chainImage = Modal.Model.ChainImage.Asset(R.drawable.bnb),
             rpcUrl = "https://bsc-testnet-rpc.publicnode.com",
             blockExplorerUrl = "https://testnet.bscscan.com"
         ),
@@ -60,6 +65,7 @@ object AppKitChainsPresets {
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = ethToken,
+            chainImage = Modal.Model.ChainImage.Asset(R.drawable.eth),
             rpcUrl = "https://cloudflare-eth.com",
             blockExplorerUrl = "https://etherscan.io"
         ),
@@ -71,6 +77,7 @@ object AppKitChainsPresets {
             optionalMethods = EthUtils.ethOptionalMethods,
             events = EthUtils.ethEvents,
             token = ethToken,
+            chainImage = Modal.Model.ChainImage.Asset(R.drawable.eth),
             rpcUrl = "https://rpc.sepolia.dev",
             blockExplorerUrl = "https://sepolia.etherscan.io/"
         )

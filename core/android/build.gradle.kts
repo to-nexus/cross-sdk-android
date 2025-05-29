@@ -23,9 +23,8 @@ android {
     defaultConfig {
         minSdk = MIN_SDK
 
-        buildConfigField(type = "String", name = "SDK_VERSION", value = "\"${requireNotNull(extra.get(KEY_PUBLISH_VERSION))}\"")
-        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "SDK_VERSION", "\"${requireNotNull(extra.get(KEY_PUBLISH_VERSION))}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("Integer", "TEST_TIMEOUT_SECONDS", getLocalProperty("TEST_TIMEOUT_SECONDS", "30"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

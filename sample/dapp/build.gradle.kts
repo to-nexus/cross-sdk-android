@@ -24,14 +24,13 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("String", "BOM_VERSION", "\"${BOM_VERSION}\"")
     }
 
     buildTypes {
         val appLink = "https://dev-cross-sdk-js.crosstoken.io"
-        val params = "projectId=${getSecretProperty("WC_CLOUD_PROJECT_ID")}&crossProjectId=${getSecretProperty("CROSS_PROJECT_ID")}"
+        val params = "projectId=${getSecretProperty("CROSS_PROJECT_ID")}"
 
         getByName("release") {
             manifestPlaceholders["appLink"] = appLink

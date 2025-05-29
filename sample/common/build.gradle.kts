@@ -16,8 +16,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\"")
-        buildConfigField("String", "CROSS_PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
         buildConfigField("String", "MIX_PANEL", "\"${getLocalProperty("MIX_PANEL")}\"")
         buildConfigField("String", "BOM_VERSION", "\"$BOM_VERSION\"")
         resValue("string", "sentry_dsn", getLocalProperty("SENTRY_DSN"))

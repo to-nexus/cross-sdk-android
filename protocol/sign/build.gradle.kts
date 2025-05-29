@@ -27,26 +27,9 @@ android {
             minCompileSdk = MIN_SDK
         }
 
-        buildConfigField(
-            type = "String",
-            name = "SDK_VERSION",
-            value = "\"${requireNotNull(extra.get(KEY_PUBLISH_VERSION))}\""
-        )
-        buildConfigField(
-            "String",
-            "PROJECT_ID",
-            "\"${getSecretProperty("WC_CLOUD_PROJECT_ID")}\""
-        )
-        buildConfigField(
-            "String",
-            "CROSS_PROJECT_ID",
-            "\"${getSecretProperty("CROSS_PROJECT_ID")}\""
-        )
-        buildConfigField(
-            "Integer",
-            "TEST_TIMEOUT_SECONDS",
-            getLocalProperty("TEST_TIMEOUT_SECONDS", "10")
-        )
+        buildConfigField("String", "SDK_VERSION", "\"${requireNotNull(extra.get(KEY_PUBLISH_VERSION))}\"")
+        buildConfigField("String", "PROJECT_ID", "\"${getSecretProperty("CROSS_PROJECT_ID")}\"")
+        buildConfigField("Integer", "TEST_TIMEOUT_SECONDS", getLocalProperty("TEST_TIMEOUT_SECONDS", "10"))
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments += mutableMapOf("clearPackageData" to "true")
@@ -55,10 +38,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "${rootDir.path}/gradle/proguard-rules/sdk-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "${rootDir.path}/gradle/proguard-rules/sdk-rules.pro")
         }
     }
 

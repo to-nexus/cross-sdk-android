@@ -40,7 +40,7 @@ internal object TestClient {
 
         private val coreProtocol = CoreClient.apply {
             Timber.d("Primary CP start: ")
-            initialize(app, BuildConfig.PROJECT_ID, BuildConfig.CROSS_PROJECT_ID, metadata, ConnectionType.MANUAL, onError = ::globalOnError)
+            initialize(app, BuildConfig.PROJECT_ID, metadata, ConnectionType.MANUAL, onError = ::globalOnError)
             Relay.connect(::globalOnError)
             _isInitialized.tryEmit(true)
             Timber.d("Primary CP finish: ")
@@ -72,7 +72,7 @@ internal object TestClient {
 
         private val coreProtocol = CoreProtocol(secondaryKoinApp).apply {
             Timber.d("Secondary CP start: ")
-            initialize(app, BuildConfig.PROJECT_ID, BuildConfig.CROSS_PROJECT_ID, metadata, ConnectionType.MANUAL) { Timber.e(it.throwable) }
+            initialize(app, BuildConfig.PROJECT_ID, metadata, ConnectionType.MANUAL) { Timber.e(it.throwable) }
 
             // Override of previous Relay necessary for reinitialization of `eventsFlow`
             Relay = RelayClient(secondaryKoinApp)

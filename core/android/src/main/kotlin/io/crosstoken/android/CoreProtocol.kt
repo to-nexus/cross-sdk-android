@@ -11,13 +11,13 @@ import io.crosstoken.android.internal.common.di.coreCommonModule
 import io.crosstoken.android.internal.common.di.coreCryptoModule
 import io.crosstoken.android.internal.common.di.coreJsonRpcModule
 import io.crosstoken.android.internal.common.di.corePairingModule
-import io.crosstoken.android.internal.common.di.explorerModule
-import io.crosstoken.android.internal.common.di.keyServerModule
+//import io.crosstoken.android.internal.common.di.explorerModule
+//import io.crosstoken.android.internal.common.di.keyServerModule
 import io.crosstoken.android.internal.common.di.pulseModule
 import io.crosstoken.android.internal.common.di.pushModule
 import io.crosstoken.android.internal.common.di.appKitModule
-import io.crosstoken.android.internal.common.explorer.ExplorerInterface
-import io.crosstoken.android.internal.common.explorer.ExplorerProtocol
+//import io.crosstoken.android.internal.common.explorer.ExplorerInterface
+//import io.crosstoken.android.internal.common.explorer.ExplorerProtocol
 import io.crosstoken.android.internal.common.model.AppMetaData
 import io.crosstoken.android.internal.common.model.ProjectId
 import io.crosstoken.android.internal.common.model.Redirect
@@ -33,7 +33,6 @@ import io.crosstoken.android.relay.ConnectionType
 import io.crosstoken.android.relay.NetworkClientTimeout
 import io.crosstoken.android.relay.RelayClient
 import io.crosstoken.android.relay.RelayConnectionInterface
-import io.crosstoken.android.utils.crossProjectId
 import io.crosstoken.android.utils.isValidRelayServerUrl
 import io.crosstoken.android.utils.plantTimber
 import io.crosstoken.android.utils.projectId
@@ -48,10 +47,9 @@ class CoreProtocol(private val koinApp: KoinApplication = wcKoinApp) : CoreInter
     override val Pairing: PairingInterface = PairingProtocol(koinApp)
     override val PairingController: PairingControllerInterface = PairingController(koinApp)
     override var Relay = RelayClient(koinApp)
-
     override val Push: PushInterface = PushClient
     override val Verify: VerifyInterface = VerifyClient(koinApp)
-    override val Explorer: ExplorerInterface = ExplorerProtocol(koinApp)
+    //override val Explorer: ExplorerInterface = ExplorerProtocol(koinApp)
 
     init {
         plantTimber()
@@ -71,36 +69,29 @@ class CoreProtocol(private val koinApp: KoinApplication = wcKoinApp) : CoreInter
         connectionType: ConnectionType,
         application: Application,
         relay: RelayConnectionInterface?,
-        keyServerUrl: String?,
         networkClientTimeout: NetworkClientTimeout?,
-        telemetryEnabled: Boolean,
         onError: (Core.Model.Error) -> Unit
     ) {
         try {
-            require(relayServerUrl.isValidRelayServerUrl()) { "Check the schema, projectId and crossProjectId parameter of the Server Url" }
+            require(relayServerUrl.isValidRelayServerUrl()) { "Check the schema and projectId parameter of the Server Url" }
 
             setup(
                 application = application,
                 serverUrl = Uri.parse(relayServerUrl)!!.let { uri ->
-                    // replace parameter 'projectId' with the value of 'crossProjectId'
                     uri.buildUpon().clearQuery().apply {
-                        appendQueryParameter("projectId", uri.getQueryParameter("crossProjectId"))
                         uri.queryParameterNames.forEach { param ->
-                            if (param != "projectId" && param != "crossProjectId") {
-                                appendQueryParameter(param, uri.getQueryParameter(param))
-                            }
+                            appendQueryParameter(param, uri.getQueryParameter(param))
                         }
                     }.build().toString()
                 },
                 projectId = relayServerUrl.projectId(),
-                crossProjectId = relayServerUrl.crossProjectId(),
-                telemetryEnabled = telemetryEnabled,
+                //telemetryEnabled = telemetryEnabled,
                 connectionType = connectionType,
                 networkClientTimeout = networkClientTimeout,
                 relay = relay,
                 onError = onError,
-                metaData = metaData,
-                keyServerUrl = keyServerUrl
+                metaData = metaData
+                //keyServerUrl = keyServerUrl
             )
         } catch (e: Exception) {
             onError(Core.Model.Error(e))
@@ -110,29 +101,25 @@ class CoreProtocol(private val koinApp: KoinApplication = wcKoinApp) : CoreInter
     override fun initialize(
         application: Application,
         projectId: String,
-        crossProjectId: String,
         metaData: Core.Model.AppMetaData,
         connectionType: ConnectionType,
         relay: RelayConnectionInterface?,
-        keyServerUrl: String?,
         networkClientTimeout: NetworkClientTimeout?,
-        telemetryEnabled: Boolean,
         onError: (Core.Model.Error) -> Unit
     ) {
         try {
-            require(projectId.isNotEmpty() && crossProjectId.isNotEmpty()) { "Project Id and Cross Project Id cannot be empty" }
+            require(projectId.isNotEmpty()) { "Project Id cannot be empty" }
 
             setup(
                 application = application,
                 projectId = projectId,
-                crossProjectId = crossProjectId,
-                telemetryEnabled = telemetryEnabled,
+                //telemetryEnabled = telemetryEnabled,
                 connectionType = connectionType,
                 networkClientTimeout = networkClientTimeout,
                 relay = relay,
                 onError = onError,
-                metaData = metaData,
-                keyServerUrl = keyServerUrl
+                metaData = metaData
+                //keyServerUrl = keyServerUrl
             )
         } catch (e: Exception) {
             onError(Core.Model.Error(e))
@@ -143,17 +130,16 @@ class CoreProtocol(private val koinApp: KoinApplication = wcKoinApp) : CoreInter
         application: Application,
         serverUrl: String? = null,
         projectId: String,
-        crossProjectId: String,
-        telemetryEnabled: Boolean,
+        telemetryEnabled: Boolean = false,
         connectionType: ConnectionType,
         networkClientTimeout: NetworkClientTimeout?,
         relay: RelayConnectionInterface?,
         onError: (Core.Model.Error) -> Unit,
         metaData: Core.Model.AppMetaData,
-        keyServerUrl: String?
+        //keyServerUrl: String? = null
     ) {
         val packageName: String = application.packageName
-        val relayServerUrl = if (serverUrl.isNullOrEmpty()) "wss://cross-relay.crosstoken.io/ws?projectId=$crossProjectId" else serverUrl
+        val relayServerUrl = if (serverUrl.isNullOrEmpty()) "wss://cross-relay.crosstoken.io/ws?projectId=$projectId" else serverUrl
 
         with(koinApp) {
             androidContext(application)
@@ -192,8 +178,8 @@ class CoreProtocol(private val koinApp: KoinApplication = wcKoinApp) : CoreInter
                 module { single { Verify } },
                 coreJsonRpcModule(),
                 corePairingModule(Pairing, PairingController),
-                keyServerModule(keyServerUrl),
-                explorerModule(),
+                //keyServerModule(keyServerUrl),
+                //explorerModule(),
                 appKitModule(),
                 pulseModule(packageName)
             )

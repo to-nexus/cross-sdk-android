@@ -14,10 +14,12 @@ import io.crosstoken.android.utils.cacao.CacaoSignerInterface
 import io.crosstoken.android.utils.cacao.sign
 import io.crosstoken.foundation.common.model.PrivateKey
 import io.crosstoken.foundation.util.jwt.encodeEd25519DidKey
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import timber.log.Timber
 
+@Ignore("KeyServer is omitted")
 class KeyserverInstrumentedAndroidTest {
     object CacaoSigner : CacaoSignerInterface<Cacao.Signature>
 

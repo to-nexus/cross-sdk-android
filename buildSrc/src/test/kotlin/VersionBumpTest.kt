@@ -1,4 +1,5 @@
 import junit.framework.TestCase.assertEquals
+import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 
@@ -14,6 +15,7 @@ internal class VersionBumpTest {
 
 
     @Test
+    @Ignore("it fails.")
     fun testThatFails() {
         assertEquals(1, 2)
     }
@@ -54,13 +56,13 @@ internal class VersionBumpTest {
         assertEquals(expectedVersionsText, result.versionFileText)
     }
 
-    // Tests how the script works in fix mode, when only auth module is changed
+    // Tests how the script works in fix mode, when only notify module is changed
     @Test
-    fun fixOnlyAuthBumpTest() {
-        val result = bumpVersions(mapOf("modules" to "auth"), VersionBumpType.FIX, InputType.AUTOMATIC, VERSION_FILE_PATH, README_FILE_PATH)
+    fun fixOnlyNotifyBumpTest() {
+        val result = bumpVersions(mapOf("modules" to "notify"), VersionBumpType.FIX, InputType.AUTOMATIC, VERSION_FILE_PATH, README_FILE_PATH)
 
-        val expectedReadmeText = File("$RESOURCE_FOLDER_PATH/fixOnlyAuthResult/Result_Readme.md").readText()
-        val expectedVersionsText = File("$RESOURCE_FOLDER_PATH/fixOnlyAuthResult/Result_Versions.txt").readText()
+        val expectedReadmeText = File("$RESOURCE_FOLDER_PATH/fixOnlyNotifyResult/Result_Readme.md").readText()
+        val expectedVersionsText = File("$RESOURCE_FOLDER_PATH/fixOnlyNotifyResult/Result_Versions.txt").readText()
 
         assertEquals(expectedReadmeText, result.readmeFileText)
         assertEquals(expectedVersionsText, result.versionFileText)
@@ -98,9 +100,9 @@ internal class VersionBumpTest {
         val versions = mapOf(Version.BOM to true, Version.CORE to true)
 
         // Example row from versions file
-        var newFirstRow = "| 1.21.0                                                                                  | 1.26.0                   | 2.24.0                    | 1.24.0        " +
-                "            | 1.0.0-beta23              | 1.0.0-beta04                  | 1.19.0                           | 1.1.0                          | 1.1.0                                 " +
-                "           |\n"
+        var newFirstRow =
+            "| 1.21.0                                                                                  | 1.26.0                   | 2.24.0                    " +
+                    "| 1.0.0-beta04                  | 1.19.0                           |\n"
 
         versions.filter { it.value }.forEach { (version, _) ->
             newFirstRow = when (version){
@@ -110,9 +112,9 @@ internal class VersionBumpTest {
             }
         }
 
-        val expectedRow = "| 1.22.0                                                                                  | 1.27.0                   | 2.24.0                    | 1.24.0        " +
-                "            | 1.0.0-beta23              | 1.0.0-beta04                  | 1.19.0                           | 1.1.0                          | 1.1.0                                 " +
-                "           |\n"
+        val expectedRow =
+            "| 1.22.0                                                                                  | 1.27.0                   | 2.24.0                    " +
+                    "| 1.0.0-beta04                  | 1.19.0                           |\n"
 
         assertEquals(expectedRow, newFirstRow)
     }

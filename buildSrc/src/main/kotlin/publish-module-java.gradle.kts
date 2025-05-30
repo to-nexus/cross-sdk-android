@@ -54,8 +54,8 @@ afterEvaluate {
 
                     developers {
                         developer {
-                            id.set("NexusCross")
-                            name.set("Nexus Cross Kotlin")
+                            id.set("NexusCrossDev")
+                            name.set("Nexus Cross Dev")
                             email.set("dev@to.nexus")
                         }
                     }

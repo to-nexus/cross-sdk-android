@@ -42,8 +42,9 @@ afterEvaluate {
 
                 pom {
                     name.set("Cross ${requireNotNull(extra.get(KEY_SDK_NAME))}")
-                    description.set("${requireNotNull(extra.get(KEY_SDK_NAME))} SDK for Criss")
+                    description.set("${requireNotNull(extra.get(KEY_SDK_NAME))} SDK for Cross")
                     url.set("https://github.com/to-nexus/cross-sdk-android")
+
                     licenses {
                         license {
                             name.set("The Apache License, Version 2.0")
@@ -57,8 +58,8 @@ afterEvaluate {
 
                     developers {
                         developer {
-                            id.set("NexusCross")
-                            name.set("Nexus Cross Kotlin")
+                            id.set("NexusCrossDev")
+                            name.set("Nexus Cross Dev")
                             email.set("dev@to.nexus")
                         }
                     }

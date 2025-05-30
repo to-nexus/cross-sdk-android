@@ -20,7 +20,7 @@ const val CHART_DELIMETER = "|"
 // note: Must match names in Version.kt
 enum class Version(var chartPosition: Int? = null) {
     BOM(1), FOUNDATION(), CORE(2), SIGN(3),
-    NOTIFY(4), WEB_3_WALLET(5), WEB_3_MODAL(6), WC_MODAL(7), MODAL_CORE();
+    NOTIFY(4), APPKIT(5), MODAL_CORE();
 
     val key: String = name + VERSION_SUFFIX
 }
@@ -106,6 +106,7 @@ fun bumpVersions(
         val bumpedVersion = bumpVersion(properties, versionBumpType, currentValue, versionKey)
         versionsText = versionsText.replace("$versionKey = \"$currentValue\"", "$versionKey = \"$bumpedVersion\"")
         newFirstRow = newFirstRow.replaceChartVersion(version, currentValue, bumpedVersion)
+        println("$versionKey: $currentValue -> $bumpedVersion")
     }
 
     return BumpVersionResult(versionsText, readmeText.replace(oldFirstRow, newFirstRow + '\n' + oldFirstRow))
@@ -133,7 +134,7 @@ fun parseInput(properties: Map<String, Any>, inputType: InputType): Map<Version,
     InputType.MANUAL -> parseManualInput(properties)
 }
 
-// ./gradlew fixBump -Pmodules=FOUNDATION,CORE,SIGN,NOTIFY,WEB_3_WALLET,WEB_3_MODAL,WC_MODAL,MODAL_CORE
+// ./gradlew fixBump -Pmodules=FOUNDATION,CORE,SIGN,NOTIFY,APPKIT,MODAL_CORE
 // ./gradlew releaseBump -Pmodules=FOUNDATION
 fun parseAutomaticInput(properties: Map<String, Any>): Map<Version, Boolean> {
     val modules = properties[PROPERTY_MODULE_KEY]?.run(String::class::safeCast)?.run { this.uppercase().split(MODULE_SEPARATOR) } ?: throw Exception("No modules specified.")
@@ -159,25 +160,17 @@ fun Map<Version, Boolean>.bumpCoreDependantModules(): Map<Version, Boolean> = en
 
 fun Map<Version, Boolean>.bumpModalCoreDependantModules(): Map<Version, Boolean> = entries.associate { (k, v) ->
     k to when (k) {
-        Version.WEB_3_MODAL, Version.WC_MODAL -> true
+        Version.APPKIT -> true
         else -> v
     }
 }
 
 fun Map<Version, Boolean>.bumpSignDependantModules(): Map<Version, Boolean> = entries.associate { (k, v) ->
     k to when (k) {
-        Version.WEB_3_WALLET, Version.WEB_3_MODAL, Version.WC_MODAL -> true
+        Version.APPKIT -> true
         else -> v
     }
 }
-
-fun Map<Version, Boolean>.bumpAuthDependantModules(): Map<Version, Boolean> = entries.associate { (k, v) ->
-    k to when (k) {
-        Version.WEB_3_WALLET -> true
-        else -> v
-    }
-}
-
 
 fun ensureModuleDependenciesWhenBumping(parsedVersions: Map<Version, Boolean>): Map<Version, Boolean> {
     val versions = parsedVersions.bumpBOM()
@@ -193,7 +186,7 @@ fun ensureModuleDependenciesWhenBumping(parsedVersions: Map<Version, Boolean>): 
     }
 }
 
-// ./gradlew manualBump -PBOM=1.0.0 -PFOUNDATION=1.0.0 -PCORE=1.0.0 -PSIGN=1.0.0 -PNOTIFY=1.0.0 -PWEB_3_WALLET=1.0.0 -PWEB_3_MODAL=1.0.0 -PWC_MODAL=1.0.0 -PMODAL_CORE=1.0.0
+// ./gradlew manualBump -PBOM=1.0.0 -PFOUNDATION=1.0.0 -PCORE=1.0.0 -PSIGN=1.0.0 -PNOTIFY=1.0.0 -PAPPKIT=1.0.0 -PMODAL_CORE=1.0.0
 fun parseManualInput(properties: Map<String, Any>): Map<Version, Boolean> {
     return Version.values().associate { version ->
         version to (properties[version.name]?.run(String::class::safeCast)?.run { true } ?: false)

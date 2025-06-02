@@ -20,6 +20,26 @@ tasks {
 
 afterEvaluate {
     publishing {
+        repositories {
+            maven {
+                name = "CrossNexusRelease"
+                url = uri("https://package.cross-nexus.com/repository/cross-sdk-android/")
+                credentials {
+                    username = System.getenv("NEXUS_USERNAME") ?: project.findProperty("nexusUsername") as String?
+                    password = System.getenv("NEXUS_PASSWORD") ?: project.findProperty("nexusPassword") as String?
+                }
+            }
+            
+            maven {
+                name = "CrossNexusSnapshot"
+                url = uri("https://package.cross-nexus.com/repository/cross-sdk-android-snap/")
+                credentials {
+                    username = System.getenv("NEXUS_USERNAME") ?: project.findProperty("nexusUsername") as String?
+                    password = System.getenv("NEXUS_PASSWORD") ?: project.findProperty("nexusPassword") as String?
+                }
+            }
+        }
+        
         publications {
             register<MavenPublication>("mavenJvm") {
                 plugins.withId("java") {
@@ -69,13 +89,29 @@ afterEvaluate {
             }
         }
     }
+    
+    // 배포 타입에 따른 리포지토리 분기
+    val deployType = project.findProperty("type") as String? ?: "both"
+    
+    tasks.withType<PublishToMavenRepository>().configureEach {
+        onlyIf {
+            when (deployType) {
+                "release" -> repository.name == "CrossNexusRelease"
+                "snap" -> repository.name == "CrossNexusSnapshot"
+                "both" -> true
+                else -> true
+            }
+        }
+    }
 }
 
 signing {
-    useInMemoryPgpKeys(
-        System.getenv("SIGNING_KEY_ID"),
-        System.getenv("SIGNING_KEY"),
-        System.getenv("SIGNING_PASSWORD")
-    )
-    sign(publishing.publications)
+    val signingKeyId = System.getenv("SIGNING_KEY_ID")
+    val signingKey = System.getenv("SIGNING_KEY")
+    val signingPassword = System.getenv("SIGNING_PASSWORD")
+    
+    if (signingKeyId != null && signingKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+        sign(publishing.publications)
+    }
 }

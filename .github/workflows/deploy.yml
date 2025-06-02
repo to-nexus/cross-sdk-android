@@ -34,7 +34,7 @@ jobs:
 
   deploy:
     name: Deploy SDK to Cross Nexus
-    needs: sonarqube
+    # needs: sonarqube
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'sdk-v*'
+  pull_request:
+    branches:
+      - main
+      - "ci/*"
   workflow_dispatch:
     inputs:
       version:
@@ -12,10 +16,26 @@ on:
         type: string
 
 permissions:
+  id-token: write
   contents: read
 
 jobs:
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   deploy:
+    name: Deploy SDK to Cross Nexus
+    needs: sonarqube
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/ci/'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

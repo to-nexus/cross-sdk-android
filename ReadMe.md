@@ -238,7 +238,6 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 
 **SDK Configuration:**
 - `CROSS_PROJECT_ID` - Cross project ID for SDK configuration
-- `WC_CLOUD_PROJECT_ID` - WalletConnect cloud project ID
 
 **Android Keystore (for samples):**
 - `SAMPLE_KEYSTORE_BASE64` - Base64 encoded sample.keystore file

@@ -124,7 +124,6 @@ jobs:
           CROSS_STORE_PASSWORD_DEBUG=${{ secrets.CROSS_STORE_PASSWORD_DEBUG }}
           CROSS_KEY_PASSWORD_DEBUG=${{ secrets.CROSS_KEY_PASSWORD_DEBUG }}
           CROSS_KEYSTORE_ALIAS_DEBUG=${{ vars.CROSS_KEYSTORE_ALIAS_DEBUG }}
-          WC_CLOUD_PROJECT_ID=${{ vars.WC_CLOUD_PROJECT_ID }}
           CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
           EOF
           echo "secrets.properties created from GitHub Secrets"
@@ -137,7 +136,6 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
-          WC_CLOUD_PROJECT_ID: ${{ secrets.WC_CLOUD_PROJECT_ID }}
         run: |
           echo "🔨 Building modules in dependency order..."
           
@@ -183,7 +181,6 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           CROSS_PROJECT_ID: ${{ vars.CROSS_PROJECT_ID }}
-          WC_CLOUD_PROJECT_ID: ${{ vars.WC_CLOUD_PROJECT_ID }}
         run: |
           echo "🚀 Deploying SDK version ${{ steps.extract_version.outputs.version }} to Cross Nexus..."
           ./gradlew deployBoth --info --no-daemon

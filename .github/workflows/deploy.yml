@@ -109,6 +109,11 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           echo "Android SDK location: $ANDROID_HOME"
 
+      - name: Create sample.keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore
+          echo "keystore created from GitHub Secrets"
+
       - name: Create secrets.properties
         run: |
           cat > secrets.properties << EOF

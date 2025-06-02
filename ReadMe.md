@@ -241,14 +241,13 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 - `WC_CLOUD_PROJECT_ID` - WalletConnect cloud project ID
 
 **Android Keystore (for samples):**
+- `SAMPLE_KEYSTORE_BASE64` - Base64 encoded sample.keystore file
 - `CROSS_STORE_PASSWORD_UPLOAD` - Upload keystore password
 - `CROSS_KEY_PASSWORD_UPLOAD` - Upload key password
-- `CROSS_KEYSTORE_ALIAS` - Upload keystore alias
 - `CROSS_STORE_PASSWORD_INTERNAL` - Internal keystore password
 - `CROSS_KEY_PASSWORD_INTERNAL` - Internal key password
 - `CROSS_STORE_PASSWORD_DEBUG` - Debug keystore password
 - `CROSS_KEY_PASSWORD_DEBUG` - Debug key password
-- `CROSS_KEYSTORE_ALIAS_DEBUG` - Debug keystore alias
 
 #### Variables
 Configure the following variables in your GitHub repository (Settings → Secrets and variables → Actions → Variables):
@@ -257,6 +256,25 @@ Configure the following variables in your GitHub repository (Settings → Secret
 - `CROSS_FILENAME_UPLOAD` - Upload keystore file path (e.g., ./sample.keystore)
 - `CROSS_FILENAME_INTERNAL` - Internal keystore file path (e.g., ./sample.keystore)
 - `CROSS_FILENAME_DEBUG` - Debug keystore file path (e.g., ./sample.keystore)
+
+**Android Keystore Aliases:**
+- `CROSS_KEYSTORE_ALIAS` - Upload keystore alias
+- `CROSS_KEYSTORE_ALIAS_DEBUG` - Debug keystore alias
+
+**SDK Configuration:**
+- `CROSS_PROJECT_ID` - Cross project ID for SDK configuration
+- `WC_CLOUD_PROJECT_ID` - WalletConnect cloud project ID
+
+#### Keystore Setup
+To encode your keystore file for GitHub Secrets:
+
+```bash
+# Encode keystore file to base64
+base64 -i sample.keystore | pbcopy  # macOS
+base64 sample.keystore | xclip -selection clipboard  # Linux
+
+# Then paste the output as SAMPLE_KEYSTORE_BASE64 secret
+```
 
 ## 📄 License
 

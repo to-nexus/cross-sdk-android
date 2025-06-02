@@ -115,8 +115,10 @@ signing {
     val signingKey = System.getenv("SIGNING_KEY")
     val signingPassword = System.getenv("SIGNING_PASSWORD")
     
-    if (signingKeyId != null && signingKey != null && signingPassword != null) {
+    if (!signingKeyId.isNullOrBlank() && !signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
         useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
         sign(publishing.publications)
+    } else {
+        println("⚠️ Signing skipped: one or more signing environment variables are missing or empty")
     }
 }

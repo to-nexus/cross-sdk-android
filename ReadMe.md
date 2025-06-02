@@ -23,19 +23,27 @@ export SIGNING_PASSWORD=your-signing-password
 
 ### 🏷️ Tag-based Deployment (Recommended)
 
-Deploy using Git tags with the format `sdk-v{version}`:
+Deploy using Git tags with the format:
 
+**Release Deployment:**
 ```bash
 # Create and push a release tag
 git tag -a "sdk-v1.0.0" -m "Release SDK v1.0.0"
 git push origin sdk-v1.0.0
 ```
 
+**Snapshot Deployment:**
+```bash
+# Create and push a snapshot tag  
+git tag -a "sdk-snap-v1.0.0" -m "Snapshot SDK v1.0.0"
+git push origin sdk-snap-v1.0.0
+```
+
 This will automatically:
-1. Extract version from tag (`sdk-v1.0.0` → `1.0.0`)
+1. Extract version from tag (`sdk-v1.0.0` → `1.0.0` or `sdk-snap-v1.0.0` → `1.0.0-SNAPSHOT`)
 2. Update all module versions
-3. Deploy to Cross Nexus (both Release and Snapshot repositories)
-4. Create GitHub Release with artifact information
+3. Deploy to appropriate Cross Nexus repository (Release or Snapshot)
+4. Create GitHub Release (Release deployments only)
 
 ### 🔧 Manual Deployment Options
 
@@ -56,6 +64,7 @@ This will automatically:
 
 Go to **Actions** → **Deploy SDK to Cross Nexus** → **Run workflow**
 - Enter version (e.g., `1.0.0`)
+- Select deployment type: `release` or `snapshot`
 
 #### 3. Local Gradle Deployment with Environment Setup
 

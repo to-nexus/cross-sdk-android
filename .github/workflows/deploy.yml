@@ -4,12 +4,21 @@ on:
   push:
     tags:
       - 'sdk-v*'
+      - 'sdk-snap-v*'
   workflow_dispatch:
     inputs:
       version:
         description: 'SDK version to deploy (e.g., 1.0.0)'
         required: true
         type: string
+      deploy_type:
+        description: 'Deployment type'
+        required: true
+        type: choice
+        options:
+          - release
+          - snapshot
+        default: release
 
 permissions:
   id-token: write
@@ -40,17 +49,43 @@ jobs:
         id: extract_version
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            # Extract version from tag (sdk-v1.0.0 -> 1.0.0)
-            VERSION=$(echo ${GITHUB_REF#refs/tags/sdk-v})
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+            
+            if [[ "$TAG_NAME" == sdk-snap-v* ]]; then
+              # SNAPSHOT version (sdk-snap-v1.0.0 -> 1.0.0-SNAPSHOT)
+              VERSION=$(echo $TAG_NAME | sed 's/^sdk-snap-v//')
+              VERSION="${VERSION}-SNAPSHOT"
+              DEPLOY_TYPE="snap"
+              echo "is_snapshot=true" >> $GITHUB_OUTPUT
+              echo "Deploying SNAPSHOT version: $VERSION"
+            else
+              # Release version (sdk-v1.0.0 -> 1.0.0)
+              VERSION=$(echo $TAG_NAME | sed 's/^sdk-v//')
+              DEPLOY_TYPE="release"
+              echo "is_snapshot=false" >> $GITHUB_OUTPUT
+              echo "Deploying RELEASE version: $VERSION"
+            fi
+            
             echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
           else
             # Manual workflow dispatch
+            DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'release' }}"
             VERSION="${{ github.event.inputs.version }}"
+            
+            if [ "$DEPLOY_TYPE" = "snapshot" ]; then
+              VERSION="${VERSION}-SNAPSHOT"
+              echo "is_snapshot=true" >> $GITHUB_OUTPUT
+              echo "tag_name=sdk-snap-v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            else
+              echo "is_snapshot=false" >> $GITHUB_OUTPUT
+              echo "tag_name=sdk-v$VERSION" >> $GITHUB_OUTPUT
+            fi
+            
             echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag_name=sdk-v$VERSION" >> $GITHUB_OUTPUT
+            echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
           fi
-          echo "Deploying SDK version: $VERSION"
           
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -133,7 +168,6 @@ jobs:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
-          WC_CLOUD_PROJECT_ID: ${{ secrets.WC_CLOUD_PROJECT_ID }}
         run: |
           echo "🔨 Building modules in dependency order..."
           
@@ -178,9 +212,15 @@ jobs:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
-          WC_CLOUD_PROJECT_ID: ${{ secrets.WC_CLOUD_PROJECT_ID }}
         run: |
-          echo "🚀 Deploying SDK version ${{ steps.extract_version.outputs.version }} to Cross Nexus..."
+          DEPLOY_TYPE=${{ steps.extract_version.outputs.deploy_type }}
+          VERSION=${{ steps.extract_version.outputs.version }}
+          
+          if [ "$DEPLOY_TYPE" = "release" ]; then
+            echo "🚀 Deploying RELEASE version $VERSION to Cross Nexus Release repository..."
+          else
+            echo "🚀 Deploying SNAPSHOT version $VERSION to Cross Nexus Snapshot repository..."
+          fi
           
           # Check if signing is configured and set environment variables conditionally
           if [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
@@ -191,10 +231,15 @@ jobs:
             echo "⚠️  Deploying without signing..."
           fi
           
-          ./gradlew deploy -Ptype=release
-          ./gradlew deploySnap -Ptype=snap
-          
+          # Deploy based on type
+          if [ "$DEPLOY_TYPE" = "release" ]; then
+            ./gradlew deploy -Ptype=release
+          else
+            ./gradlew deploySnap -Ptype=snap
+          fi
+
       - name: Create GitHub Release
+        if: steps.extract_version.outputs.is_snapshot == 'false'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -204,9 +249,9 @@ jobs:
           body: |
             ## Cross SDK Android v${{ steps.extract_version.outputs.version }}
             
-            ### 배포된 아티팩트
+            ### 📦 배포된 아티팩트 (Release)
             
-            **BOM:**
+            **BOM (권장):**
             ```kotlin
             implementation(platform("io.crosstoken:android-bom:${{ steps.extract_version.outputs.version }}"))
             ```
@@ -221,20 +266,8 @@ jobs:
             implementation("io.crosstoken:modal-core:${{ steps.extract_version.outputs.version }}")
             ```
             
-            ### 배포 방법
+            ### 🏪 저장소 설정
             
-            **간단한 Gradle 명령어:**
-            ```bash
-            ./gradlew deploy -Ptype=release      # Release만
-            ./gradlew deploySnap -Ptype=snap     # Snapshot만  
-            ./gradlew deployBoth                 # 둘 다
-            ```
-            
-            ### 저장소
-            - Release: https://package.cross-nexus.com/repository/cross-sdk-android/
-            - Snapshot: https://package.cross-nexus.com/repository/cross-sdk-android-snap/
-            
-            ### 사용법
             ```kotlin
             repositories {
                 maven {
@@ -246,5 +279,34 @@ jobs:
                 }
             }
             ```
+            
+            ### 🚀 태그 기반 배포 방법
+            
+            ```bash
+            # 릴리즈 배포
+            git tag -a "sdk-v1.0.0" -m "Release v1.0.0"
+            git push origin sdk-v1.0.0
+            
+            # 스냅샷 배포  
+            git tag -a "sdk-snap-v1.0.0" -m "Snapshot v1.0.0"
+            git push origin sdk-snap-v1.0.0
+            ```
+            
+            ### 🔧 로컬 배포 방법
+            
+            ```bash
+            # 릴리즈 저장소에만 배포
+            ./gradlew deploy -Ptype=release
+            
+            # 스냅샷 저장소에만 배포 (개발용)
+            ./gradlew deploySnap -Ptype=snap
+            
+            # 두 저장소 모두 배포
+            ./gradlew deployBoth
+            ```
+            
+            ### 📍 저장소 주소
+            - **Release**: https://package.cross-nexus.com/repository/cross-sdk-android/
+            - **Snapshot**: https://package.cross-nexus.com/repository/cross-sdk-android-snap/
           draft: false
           prerelease: false

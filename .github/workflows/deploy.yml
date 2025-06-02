@@ -112,28 +112,6 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-            
-      - name: Update version in build files
-        run: |
-          VERSION=${{ steps.extract_version.outputs.version }}
-          echo "Updating version to: $VERSION"
-          
-          # Update version in Versions.kt
-          sed -i.bak "s/const val BOM_VERSION = \".*\"/const val BOM_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          sed -i.bak "s/const val FOUNDATION_VERSION = \".*\"/const val FOUNDATION_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          sed -i.bak "s/const val CORE_VERSION = \".*\"/const val CORE_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          sed -i.bak "s/const val SIGN_VERSION = \".*\"/const val SIGN_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          sed -i.bak "s/const val NOTIFY_VERSION = \".*\"/const val NOTIFY_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          sed -i.bak "s/const val APPKIT_VERSION = \".*\"/const val APPKIT_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          sed -i.bak "s/const val MODAL_CORE_VERSION = \".*\"/const val MODAL_CORE_VERSION = \"$VERSION\"/" buildSrc/src/main/kotlin/Versions.kt
-          
-          # Clean up backup files
-          rm -f buildSrc/src/main/kotlin/Versions.kt.bak
-          
-      - name: Validate updated versions
-        run: |
-          echo "Updated versions in Versions.kt:"
-          grep "_VERSION = " buildSrc/src/main/kotlin/Versions.kt
           
       - name: Create local.properties
         run: |

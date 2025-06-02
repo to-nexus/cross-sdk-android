@@ -4,10 +4,6 @@ on:
   push:
     tags:
       - 'sdk-v*'
-  pull_request:
-    branches:
-      - main
-      - "ci/*"
   workflow_dispatch:
     inputs:
       version:
@@ -34,7 +30,7 @@ jobs:
 
   deploy:
     name: Deploy SDK to Cross Nexus
-    # needs: sonarqube
+    needs: sonarqube
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -145,6 +141,13 @@ jobs:
         run: |
           echo "🔨 Building modules in dependency order..."
           
+          # Check if signing is configured
+          if [ -z "$SIGNING_KEY_ID" ] || [ -z "$SIGNING_KEY" ] || [ -z "$SIGNING_PASSWORD" ]; then
+            echo "⚠️  Signing secrets not configured - artifacts will not be signed"
+          else
+            echo "🔑 Signing secrets configured - artifacts will be signed"
+          fi
+          
           # Build foundation first (no dependencies)
           echo "📦 Building foundation..."
           ./gradlew :foundation:publishToMavenLocal --no-daemon
@@ -179,8 +182,8 @@ jobs:
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-          CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
-          WC_CLOUD_PROJECT_ID: ${{ secrets.WC_CLOUD_PROJECT_ID }}
+          CROSS_PROJECT_ID: ${{ vars.CROSS_PROJECT_ID }}
+          WC_CLOUD_PROJECT_ID: ${{ vars.WC_CLOUD_PROJECT_ID }}
         run: |
           echo "🚀 Deploying SDK version ${{ steps.extract_version.outputs.version }} to Cross Nexus..."
           ./gradlew deployBoth --info --no-daemon

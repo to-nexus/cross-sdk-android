@@ -232,7 +232,6 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 **Nexus & Signing:**
 - `NEXUS_USERNAME` - Cross Nexus repository username
 - `NEXUS_PASSWORD` - Cross Nexus repository password
-- `SIGNING_KEY_ID` - GPG signing key ID
 - `SIGNING_KEY` - GPG private key (base64 encoded)
 - `SIGNING_PASSWORD` - GPG key passphrase
 

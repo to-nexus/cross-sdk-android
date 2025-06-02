@@ -193,7 +193,8 @@ jobs:
             echo "⚠️  Deploying without signing..."
           fi
           
-          ./gradlew deployBoth --info --no-daemon
+          ./gradlew deploy -Ptype=release
+          ./gradlew deploySnap -Ptype=snap
           
       - name: Create GitHub Release
         uses: actions/create-release@v1

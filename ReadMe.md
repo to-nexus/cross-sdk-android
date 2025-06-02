@@ -218,11 +218,11 @@ dependencies {
 Due to inter-module dependencies, modules are built in the following order:
 1. `foundation` - Base foundation module
 2. `core:android` - Core Android functionality
-3. `core:bom` - Bill of Materials
-4. `core:modal` - Modal core components
-5. `protocol:sign` - Sign protocol
-6. `protocol:notify` - Notify protocol  
-7. `product:appkit` - AppKit product
+3. `core:modal` - Modal core components
+4. `protocol:sign` - Sign protocol
+5. `protocol:notify` - Notify protocol  
+6. `product:appkit` - AppKit product
+7. `core:bom` - Bill of Materials
 
 ### GitHub Actions Configuration
 
@@ -262,7 +262,6 @@ Configure the following variables in your GitHub repository (Settings → Secret
 
 **SDK Configuration:**
 - `CROSS_PROJECT_ID` - Cross project ID for SDK configuration
-- `WC_CLOUD_PROJECT_ID` - WalletConnect cloud project ID
 
 #### Keystore Setup
 To encode your keystore file for GitHub Secrets:

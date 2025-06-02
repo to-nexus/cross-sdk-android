@@ -72,11 +72,14 @@ android {
 
 fun getSecretProperty(key: String): String {
     return System.getenv(key) ?: rootProject.file("secrets.properties").let { secretsFile ->
-        check(secretsFile.exists()) { "Secrets file not found at path: ${secretsFile.absolutePath}" }
-        Properties().apply {
-            load(secretsFile.inputStream())
+        if (secretsFile.exists()) {
+            Properties().apply {
+                load(secretsFile.inputStream())
+            }.getProperty(key) ?: ""
+        } else {
+            ""
         }
-    }.getProperty(key)
+    }
 }
 
 dependencies {

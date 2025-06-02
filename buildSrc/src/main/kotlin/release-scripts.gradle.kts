@@ -4,6 +4,7 @@ import kotlin.reflect.full.safeCast
 
 // Example ./gradlew releaseAllSDKs -Ptype=local
 // Example ./gradlew releaseAllSDKs -Ptype=sonatype
+// Example ./gradlew releaseAllSDKs -Ptype=crossnexus
 tasks.register("releaseAllSDKs") {
     doLast {
         project.findProperty("type")
@@ -27,6 +28,37 @@ tasks.register("releaseAllSDKs") {
     }
 }
 
+// Cross Nexus용 배포 태스크 추가
+tasks.register("releaseAllSDKsToCrossNexus") {
+    group = "publishing"
+    description = "Release all SDKs to Cross Nexus repositories (both release and snapshot)"
+    doLast {
+        generateListOfModuleTasks(ReleaseType.CROSSNEXUS_RELEASE).forEach { task ->
+            println("Executing Release Task: $task")
+            exec {
+                val gradleCommand = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                    "gradlew.bat"
+                } else {
+                    "./gradlew"
+                }
+                commandLine(gradleCommand, task.path)
+            }
+        }
+        
+        generateListOfModuleTasks(ReleaseType.CROSSNEXUS_SNAPSHOT).forEach { task ->
+            println("Executing Snapshot Task: $task")
+            exec {
+                val gradleCommand = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                    "gradlew.bat"
+                } else {
+                    "./gradlew"
+                }
+                commandLine(gradleCommand, task.path)
+            }
+        }
+    }
+}
+
 fun generateListOfModuleTasks(type: ReleaseType): List<Task> = compileListOfSDKs().extractListOfPublishingTasks(type)
 
 // Triple consists of the root module name, the child module name, and if it's a JVM or Android module
@@ -47,8 +79,12 @@ fun List<Triple<String, String?, String>>.extractListOfPublishingTasks(type: Rel
     val task = when {
         env == "jvm" && type == ReleaseType.LOCAL -> "${publishJvmRoot}MavenLocal"
         env == "jvm" && type == ReleaseType.SONATYPE -> "${publishJvmRoot}SonatypeRepository"
+        env == "jvm" && type == ReleaseType.CROSSNEXUS_RELEASE -> "${publishJvmRoot}CrossNexusReleaseRepository"
+        env == "jvm" && type == ReleaseType.CROSSNEXUS_SNAPSHOT -> "${publishJvmRoot}CrossNexusSnapshotRepository"
         env == "android" && type == ReleaseType.LOCAL -> "${publishAndroidRoot}MavenLocal"
         env == "android" && type == ReleaseType.SONATYPE -> "${publishAndroidRoot}SonatypeRepository"
+        env == "android" && type == ReleaseType.CROSSNEXUS_RELEASE -> "${publishAndroidRoot}CrossNexusReleaseRepository"
+        env == "android" && type == ReleaseType.CROSSNEXUS_SNAPSHOT -> "${publishAndroidRoot}CrossNexusSnapshotRepository"
         else -> throw Exception("Unknown Type or Env")
     }
 
@@ -65,5 +101,5 @@ private val publishJvmRoot = "publishMavenJvmPublicationTo"
 private val publishAndroidRoot = "publishReleasePublicationTo"
 
 enum class ReleaseType {
-    LOCAL, SONATYPE
+    LOCAL, SONATYPE, CROSSNEXUS_RELEASE, CROSSNEXUS_SNAPSHOT
 }

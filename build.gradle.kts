@@ -1,16 +1,7 @@
 import com.android.build.gradle.BaseExtension
-import org.apache.http.client.methods.HttpGet
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.HttpClients
-import org.apache.http.util.EntityUtils
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import java.util.Base64
-import javax.xml.parsers.DocumentBuilderFactory
 
 plugins {
-    alias(libs.plugins.nexusPublish)
-    alias(libs.plugins.sonarqube)
     id("release-scripts")
     id("version-bump")
 }
@@ -34,41 +25,7 @@ allprojects {
     }
 }
 
-////todo: user sonar cloud after repos are public
-//sonar {
-//    properties {
-//        properties(
-//            mapOf(
-//                "sonar.projectKey" to "Nexus_CrossWCKotlin",
-//                "sonar.organization" to "nexus",
-//                "sonar.host.url" to "https://sonarcloud.io",
-//                "sonar.gradle.skipCompile" to true,
-//                "sonar.coverage.exclusions" to "sample/**,**/di/**,/buildSrc/**,**/gradle/**,**/test/**,**/androidTest/**,**/build.gradle.kts",
-//            )
-//        )
-//    }
-//}
-
 subprojects {
-    apply(plugin = rootProject.libs.plugins.sonarqube.get().pluginId)
-
-////todo: user sonar cloud after repos are public
-//    extensions.configure<SonarExtension> {
-//        setAndroidVariant("debug")
-//
-//        isSkipProject = name == "bom"
-//        properties {
-//            properties(
-//                mapOf(
-//                    "sonar.gradle.skipCompile" to true,
-//                    "sonar.sources" to "${projectDir}/src/main/kotlin",
-//                    "sonar.java.binaries" to layout.buildDirectory,
-//                    "sonar.coverage.jacoco.xmlReportPaths" to "${layout.buildDirectory}/reports/jacoco/xml/jacoco.xml"
-//                )
-//            )
-//        }
-//    }
-
     afterEvaluate {
         if (hasProperty("android")) {
             extensions.configure(BaseExtension::class.java) {
@@ -107,232 +64,65 @@ task<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
 
-nexusPublishing {
-    repositories {
-//        project.version = "-SNAPSHOT"
-        sonatype {
-            stagingProfileId.set(System.getenv("CROSS_SONATYPE_STAGING_PROFILE_ID"))
-            packageGroup.set("io.crosstoken")
-            username.set(System.getenv("OSSRH_USERNAME"))
-            password.set(System.getenv("OSSRH_PASSWORD"))
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-        }
+// Cross Nexus용 배포 작업들
+tasks.register("deploy") {
+    group = "publishing"
+    description = "Deploy to Cross Nexus Release repository only"
+    doFirst {
+        println("🚀 Release 리포지토리에만 배포합니다...")
     }
+    dependsOn(
+        ":foundation:publishAllPublicationsToCrossNexusReleaseRepository",
+        ":core:android:publishAllPublicationsToCrossNexusReleaseRepository",
+        ":core:bom:publishAllPublicationsToCrossNexusReleaseRepository",
+        ":core:modal:publishAllPublicationsToCrossNexusReleaseRepository",
+        ":protocol:sign:publishAllPublicationsToCrossNexusReleaseRepository",
+        ":protocol:notify:publishAllPublicationsToCrossNexusReleaseRepository",
+        ":product:appkit:publishAllPublicationsToCrossNexusReleaseRepository"
+    )
 }
 
-val nexusUsername: String get() = System.getenv("OSSRH_USERNAME")
-val nexusPassword: String get() = System.getenv("OSSRH_PASSWORD")
-val nexusUrl = "https://s01.oss.sonatype.org/service/local/staging"
-
-tasks.register("closeAndReleaseMultipleRepositories") {
-    group = "release"
-    description = "Release all Sonatype staging repositories"
-
-    doLast {
-        val repos = fetchOpenRepositoryIds()
-        if (repos.isEmpty()) {
-            println("No open repositories found")
-            return@doLast
-        }
-        closeRepositories(repos)
-        waitForAllRepositoriesToDesireState(repos, "closed")
-        releaseRepositories(repos)
-        waitForAllRepositoriesToDesireState(repos, "released")
-        dropRepositories(repos)
-        waitForArtifactsToBeAvailable()
+tasks.register("deploySnap") {
+    group = "publishing"
+    description = "Deploy to Cross Nexus Snapshot repository only"
+    doFirst {
+        println("🚀 Snapshot 리포지토리에만 배포합니다...")
     }
+    dependsOn(
+        ":foundation:publishAllPublicationsToCrossNexusSnapshotRepository",
+        ":core:android:publishAllPublicationsToCrossNexusSnapshotRepository",
+        ":core:bom:publishAllPublicationsToCrossNexusSnapshotRepository",
+        ":core:modal:publishAllPublicationsToCrossNexusSnapshotRepository",
+        ":protocol:sign:publishAllPublicationsToCrossNexusSnapshotRepository",
+        ":protocol:notify:publishAllPublicationsToCrossNexusSnapshotRepository",
+        ":product:appkit:publishAllPublicationsToCrossNexusSnapshotRepository"
+    )
 }
 
-fun fetchOpenRepositoryIds(): List<String> {
-    val client = HttpClients.createDefault()
-    val httpGet = HttpGet("$nexusUrl/profile_repositories").apply {
-        setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString("$nexusUsername:$nexusPassword".toByteArray()))
+tasks.register("deployBoth") {
+    group = "publishing"
+    description = "Deploy to both Cross Nexus Release and Snapshot repositories"
+    doFirst {
+        println("🚀 Release와 Snapshot 리포지토리 모두에 배포합니다...")
     }
-
-    val response = client.execute(httpGet)
-    val responseBody = EntityUtils.toString(response.entity)
-    if (response.statusLine.statusCode != 200) {
-        throw RuntimeException("Failed: HTTP error code : ${response.statusLine.statusCode} $responseBody")
-    }
-
-    return parseRepositoryIds(responseBody)
+    dependsOn("deploy", "deploySnap")
 }
 
-fun parseRepositoryIds(xmlResponse: String): List<String> {
-    val factory = DocumentBuilderFactory.newInstance()
-    val builder = factory.newDocumentBuilder()
-    val inputStream = xmlResponse.byteInputStream()
-    val doc = builder.parse(inputStream)
-    val nodeList = doc.getElementsByTagName("stagingProfileRepository")
-
-    val repositoryIds = mutableListOf<String>()
-    for (i in 0 until nodeList.length) {
-        val node = nodeList.item(i)
-        val element = node as? org.w3c.dom.Element
-        val repoId = element?.getElementsByTagName("repositoryId")?.item(0)?.textContent
-        val type = element?.getElementsByTagName("type")?.item(0)?.textContent
-        if (repoId != null && type == "open") {
-            repositoryIds.add(repoId)
-        }
-    }
-    return repositoryIds
+// 환경별 배포 태스크들
+tasks.register("deployDev") {
+    group = "publishing"
+    description = "Deploy to Dev environment with Cross Nexus"
+    dependsOn("deployBoth")
 }
 
-fun closeRepositories(repoIds: List<String>) {
-    val closeUrl = "$nexusUrl/bulk/close"
-    val json = """
-            {
-                "data": {
-                    "stagedRepositoryIds": ${repoIds.joinToString(prefix = "[\"", separator = "\",\"", postfix = "\"]")}
-                }
-            }
-        """.trimIndent()
-    executePostRequest(closeUrl, json)
-    println("Closed repositories: ${repoIds.joinToString(", ")}")
+tasks.register("deployStage") {
+    group = "publishing"
+    description = "Deploy to Stage environment with Cross Nexus"
+    dependsOn("deployBoth")
 }
 
-fun releaseRepositories(repoIds: List<String>) {
-    val releaseUrl = "$nexusUrl/bulk/promote"
-    val json = """
-            {
-                "data": {
-                    "stagedRepositoryIds": ${repoIds.joinToString(prefix = "[\"", separator = "\",\"", postfix = "\"]")}
-                }
-            }
-        """.trimIndent()
-    println("Released repositories: ${repoIds.joinToString(", ")}")
-    executePostRequest(releaseUrl, json)
+tasks.register("deployProd") {
+    group = "publishing"
+    description = "Deploy to Production environment with Cross Nexus"
+    dependsOn("deployBoth")
 }
-
-fun dropRepositories(repoIds: List<String>) {
-    val dropUrl = "$nexusUrl/bulk/drop"
-    val json = """
-            {
-                "data": {
-                    "stagedRepositoryIds": ${repoIds.joinToString(prefix = "[\"", separator = "\",\"", postfix = "\"]")}
-                }
-            }
-        """.trimIndent()
-    executePostRequest(dropUrl, json)
-    println("Dropped repositories: ${repoIds.joinToString(", ")}")
-}
-
-fun waitForAllRepositoriesToDesireState(repoIds: List<String>, desireState: String) {
-    val client = HttpClients.createDefault()
-    val statusUrl = "$nexusUrl/repository/"
-    val closedRepos = mutableSetOf<String>()
-
-    while (closedRepos.size < repoIds.size) {
-        repoIds.forEach { repoId ->
-            if (!closedRepos.contains(repoId)) {
-                val httpGet = HttpGet("$statusUrl$repoId").apply {
-                    setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString("$nexusUsername:$nexusPassword".toByteArray()))
-                }
-                val response = client.execute(httpGet)
-                println("GET request to $repoId returned status code: ${response.statusLine.statusCode}")
-                val responseBody = EntityUtils.toString(response.entity)
-
-                val state = parseRepositoryState(responseBody, repoId)
-                if (state == desireState) {
-                    println("Repository $repoId is now in state: $state")
-                    closedRepos.add(repoId)
-                } else {
-                    println("Waiting for repository $repoId to be $desireState, current state: $state")
-                }
-            }
-        }
-        if (closedRepos.size < repoIds.size) {
-            Thread.sleep(30000) // Wait for 30 seconds before retrying
-        }
-    }
-}
-
-fun waitForArtifactsToBeAvailable() {
-    val repoIds: List<String> = repoIdWithVersion.map { it.first }
-    val client = HttpClients.createDefault()
-    val artifactUrls = repoIdWithVersion.map { (repoId, version) ->
-        println("Checking: https://repo1.maven.org/maven2/io/crosstoken/$repoId/$version/")
-        "https://repo1.maven.org/maven2/io/crosstoken/$repoId/$version/"
-    }
-    val maxRetries = 40
-    var attempt = 0
-    val availableRepos = mutableSetOf<String>()
-
-    while (availableRepos.size < repoIds.size && attempt < maxRetries) {
-        artifactUrls.forEachIndexed { index, artifactUrl ->
-            if (!availableRepos.contains(repoIds[index])) {
-                val httpGet = HttpGet(artifactUrl)
-                try {
-                    val response = client.execute(httpGet)
-                    val statusCode = response.statusLine.statusCode
-                    EntityUtils.consume(response.entity) // Ensure the response is fully consumed
-                    if (statusCode == 200 || statusCode == 201) {
-                        println("Artifact for repository ${repoIds[index]} is now available.")
-                        availableRepos.add(repoIds[index])
-                    } else {
-                        println("Artifact for repository ${repoIds[index]} not yet available. Status code: $statusCode")
-                    }
-                } catch (e: Exception) {
-                    println("Error checking artifact for repository ${repoIds[index]}: ${e.message}")
-                } finally {
-                    httpGet.releaseConnection() // Ensure the connection is released
-                }
-            }
-        }
-        if (availableRepos.size < repoIds.size) {
-            println("Waiting for artifacts to be available... Attempt: ${attempt + 1}")
-            attempt++
-            Thread.sleep(45000) // Wait for 10 seconds before retrying
-        }
-    }
-
-    if (availableRepos.size < repoIds.size) {
-        throw RuntimeException("Artifacts were not available after ${maxRetries * 10} seconds.")
-    } else {
-        println("All artifacts are now available.")
-    }
-}
-
-fun executePostRequest(url: String, json: String) {
-    val client = HttpClients.createDefault()
-    val httpPost = HttpPost(url).apply {
-        setHeader("Content-type", "application/json")
-        entity = StringEntity(json)
-        setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString("$nexusUsername:$nexusPassword".toByteArray()))
-    }
-
-    val response = client.execute(httpPost)
-    val responseBody = EntityUtils.toString(response.entity)
-    if (response.statusLine.statusCode != 201) {
-        throw RuntimeException("Failed: HTTP error code : ${response.statusLine.statusCode} $responseBody")
-    }
-}
-
-fun parseRepositoryState(xmlResponse: String, repositoryId: String): String? {
-    val factory = DocumentBuilderFactory.newInstance()
-    val builder = factory.newDocumentBuilder()
-    val inputStream = xmlResponse.byteInputStream()
-    val doc = builder.parse(inputStream)
-    val nodeList = doc.getElementsByTagName("stagingProfileRepository")
-
-    for (i in 0 until nodeList.length) {
-        val node = nodeList.item(i)
-        val element = node as? org.w3c.dom.Element
-        val repoId = element?.getElementsByTagName("repositoryId")?.item(0)?.textContent
-        if (repoId == repositoryId) {
-            return element.getElementsByTagName("type").item(0)?.textContent
-        }
-    }
-    return null
-}
-
-private val repoIdWithVersion = listOf(
-    Pair(ANDROID_BOM, BOM_VERSION),
-    Pair(FOUNDATION, FOUNDATION_VERSION),
-    Pair(ANDROID_CORE, CORE_VERSION),
-    Pair(SIGN, SIGN_VERSION),
-    Pair(NOTIFY, NOTIFY_VERSION),
-    Pair(APPKIT, APPKIT_VERSION),
-    Pair(MODAL_CORE, MODAL_CORE_VERSION)
-)

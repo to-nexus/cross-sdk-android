@@ -22,7 +22,7 @@ const val NOTIFY = "notify"
 const val APPKIT = "appkit"
 const val MODAL_CORE = "modal-core"
 
-val jvmVersion = JavaVersion.VERSION_11
+val jvmVersion = JavaVersion.VERSION_17
 const val MIN_SDK: Int = 23
 const val TARGET_SDK: Int = 34
 const val COMPILE_SDK: Int = TARGET_SDK

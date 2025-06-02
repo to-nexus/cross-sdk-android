@@ -1,0 +1,290 @@
+name: Deploy SDK to Cross Nexus
+
+on:
+  push:
+    tags:
+      - 'sdk-v*'
+      - 'sdk-snap-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'SDK version to deploy (e.g., 1.0.0)'
+        required: true
+        type: string
+      deploy_type:
+        description: 'Deployment type'
+        required: true
+        type: choice
+        options:
+          - release
+          - snapshot
+        default: release
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  deploy:
+    name: Deploy SDK to Cross Nexus
+    needs: sonarqube
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+            
+            if [[ "$TAG_NAME" == sdk-snap-v* ]]; then
+              # SNAPSHOT version (sdk-snap-v1.0.0 -> 1.0.0-SNAPSHOT)
+              VERSION=$(echo $TAG_NAME | sed 's/^sdk-snap-v//')
+              VERSION="${VERSION}-SNAPSHOT"
+              DEPLOY_TYPE="snap"
+              echo "is_snapshot=true" >> $GITHUB_OUTPUT
+              echo "Deploying SNAPSHOT version: $VERSION"
+            else
+              # Release version (sdk-v1.0.0 -> 1.0.0)
+              VERSION=$(echo $TAG_NAME | sed 's/^sdk-v//')
+              DEPLOY_TYPE="release"
+              echo "is_snapshot=false" >> $GITHUB_OUTPUT
+              echo "Deploying RELEASE version: $VERSION"
+            fi
+            
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
+          else
+            # Manual workflow dispatch
+            DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'release' }}"
+            VERSION="${{ github.event.inputs.version }}"
+            
+            if [ "$DEPLOY_TYPE" = "snapshot" ]; then
+              VERSION="${VERSION}-SNAPSHOT"
+              echo "is_snapshot=true" >> $GITHUB_OUTPUT
+              echo "tag_name=sdk-snap-v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            else
+              echo "is_snapshot=false" >> $GITHUB_OUTPUT
+              echo "tag_name=sdk-v$VERSION" >> $GITHUB_OUTPUT
+            fi
+            
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+        
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+          
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "Android SDK location: $ANDROID_HOME"
+
+      - name: Create sample.keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore
+          echo "keystore created from GitHub Secrets"
+
+      - name: Create secrets.properties
+        run: |
+          cat > secrets.properties << EOF
+          CROSS_FILENAME_UPLOAD=${{ vars.CROSS_FILENAME_UPLOAD }}
+          CROSS_STORE_PASSWORD_UPLOAD=${{ secrets.CROSS_STORE_PASSWORD_UPLOAD }}
+          CROSS_KEY_PASSWORD_UPLOAD=${{ secrets.CROSS_KEY_PASSWORD_UPLOAD }}
+          CROSS_KEYSTORE_ALIAS=${{ vars.CROSS_KEYSTORE_ALIAS }}
+          CROSS_FILENAME_INTERNAL=${{ vars.CROSS_FILENAME_INTERNAL }}
+          CROSS_STORE_PASSWORD_INTERNAL=${{ secrets.CROSS_STORE_PASSWORD_INTERNAL }}
+          CROSS_KEY_PASSWORD_INTERNAL=${{ secrets.CROSS_KEY_PASSWORD_INTERNAL }}
+          CROSS_FILENAME_DEBUG=${{ vars.CROSS_FILENAME_DEBUG }}
+          CROSS_STORE_PASSWORD_DEBUG=${{ secrets.CROSS_STORE_PASSWORD_DEBUG }}
+          CROSS_KEY_PASSWORD_DEBUG=${{ secrets.CROSS_KEY_PASSWORD_DEBUG }}
+          CROSS_KEYSTORE_ALIAS_DEBUG=${{ vars.CROSS_KEYSTORE_ALIAS_DEBUG }}
+          CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
+          EOF
+          echo "secrets.properties created from GitHub Secrets"
+
+      - name: Build and publish dependencies to local repository
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+        run: |
+          echo "🔨 Building modules in dependency order..."
+          
+          # Check if signing is configured and set environment variables conditionally
+          if [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
+            echo "🔑 Signing secrets configured - artifacts will be signed"
+            export SIGNING_KEY="${{ secrets.SIGNING_KEY }}"
+            export SIGNING_PASSWORD="${{ secrets.SIGNING_PASSWORD }}"
+          else
+            echo "⚠️  Signing secrets not configured - artifacts will not be signed"
+          fi
+          
+          # Build foundation first (no dependencies)
+          echo "📦 Building foundation..."
+          ./gradlew :foundation:publishToMavenLocal --no-daemon
+          
+          # Build core modules
+          echo "📦 Building core:android..."
+          ./gradlew :core:android:publishToMavenLocal --no-daemon
+          
+          echo "📦 Building core:modal..."
+          ./gradlew :core:modal:publishToMavenLocal --no-daemon
+          
+          # Build protocol modules
+          echo "📦 Building protocol:sign..."
+          ./gradlew :protocol:sign:publishToMavenLocal --no-daemon
+          
+          echo "📦 Building protocol:notify..."
+          ./gradlew :protocol:notify:publishToMavenLocal --no-daemon
+          
+          # Build product modules (depends on all above)
+          echo "📦 Building product:appkit..."
+          ./gradlew :product:appkit:publishToMavenLocal --no-daemon
+
+          echo "📦 Building core:bom..."
+          ./gradlew :core:bom:publishToMavenLocal --no-daemon
+          
+          echo "✅ All modules built and published to local repository"
+          
+      - name: Deploy to Cross Nexus
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+        run: |
+          DEPLOY_TYPE=${{ steps.extract_version.outputs.deploy_type }}
+          VERSION=${{ steps.extract_version.outputs.version }}
+          
+          if [ "$DEPLOY_TYPE" = "release" ]; then
+            echo "🚀 Deploying RELEASE version $VERSION to Cross Nexus Release repository..."
+          else
+            echo "🚀 Deploying SNAPSHOT version $VERSION to Cross Nexus Snapshot repository..."
+          fi
+          
+          # Check if signing is configured and set environment variables conditionally
+          if [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
+            echo "🔑 Setting up signing for deployment..."
+            export SIGNING_KEY="${{ secrets.SIGNING_KEY }}"
+            export SIGNING_PASSWORD="${{ secrets.SIGNING_PASSWORD }}"
+          else
+            echo "⚠️  Deploying without signing..."
+          fi
+          
+          # Deploy based on type
+          if [ "$DEPLOY_TYPE" = "release" ]; then
+            ./gradlew deploy -Ptype=release
+          else
+            ./gradlew deploySnap -Ptype=snap
+          fi
+
+      - name: Create GitHub Release
+        if: steps.extract_version.outputs.is_snapshot == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.extract_version.outputs.tag_name }}
+          release_name: Cross SDK Android v${{ steps.extract_version.outputs.version }}
+          body: |
+            ## Cross SDK Android v${{ steps.extract_version.outputs.version }}
+            
+            ### 📦 배포된 아티팩트 (Release)
+            
+            **BOM (권장):**
+            ```kotlin
+            implementation(platform("io.crosstoken:android-bom:${{ steps.extract_version.outputs.version }}"))
+            ```
+            
+            **개별 모듈:**
+            ```kotlin
+            implementation("io.crosstoken:foundation:${{ steps.extract_version.outputs.version }}")
+            implementation("io.crosstoken:android-core:${{ steps.extract_version.outputs.version }}")
+            implementation("io.crosstoken:sign:${{ steps.extract_version.outputs.version }}")
+            implementation("io.crosstoken:notify:${{ steps.extract_version.outputs.version }}")
+            implementation("io.crosstoken:appkit:${{ steps.extract_version.outputs.version }}")
+            implementation("io.crosstoken:modal-core:${{ steps.extract_version.outputs.version }}")
+            ```
+            
+            ### 🏪 저장소 설정
+            
+            ```kotlin
+            repositories {
+                maven {
+                    url = uri("https://package.cross-nexus.com/repository/cross-sdk-android/")
+                    credentials {
+                        username = "your-nexus-username"
+                        password = "your-nexus-password"
+                    }
+                }
+            }
+            ```
+            
+            ### 🚀 태그 기반 배포 방법
+            
+            ```bash
+            # 릴리즈 배포
+            git tag -a "sdk-v1.0.0" -m "Release v1.0.0"
+            git push origin sdk-v1.0.0
+            
+            # 스냅샷 배포  
+            git tag -a "sdk-snap-v1.0.0" -m "Snapshot v1.0.0"
+            git push origin sdk-snap-v1.0.0
+            ```
+            
+            ### 🔧 로컬 배포 방법
+            
+            ```bash
+            # 릴리즈 저장소에만 배포
+            ./gradlew deploy -Ptype=release
+            
+            # 스냅샷 저장소에만 배포 (개발용)
+            ./gradlew deploySnap -Ptype=snap
+            
+            # 두 저장소 모두 배포
+            ./gradlew deployBoth
+            ```
+            
+            ### 📍 저장소 주소
+            - **Release**: https://package.cross-nexus.com/repository/cross-sdk-android/
+            - **Snapshot**: https://package.cross-nexus.com/repository/cross-sdk-android-snap/
+          draft: false
+          prerelease: false

@@ -155,9 +155,6 @@ jobs:
           echo "📦 Building core:android..."
           ./gradlew :core:android:publishToMavenLocal --no-daemon
           
-          echo "📦 Building core:bom..."
-          ./gradlew :core:bom:publishToMavenLocal --no-daemon
-          
           echo "📦 Building core:modal..."
           ./gradlew :core:modal:publishToMavenLocal --no-daemon
           
@@ -171,6 +168,9 @@ jobs:
           # Build product modules (depends on all above)
           echo "📦 Building product:appkit..."
           ./gradlew :product:appkit:publishToMavenLocal --no-daemon
+
+          echo "📦 Building core:bom..."
+          ./gradlew :core:bom:publishToMavenLocal --no-daemon
           
           echo "✅ All modules built and published to local repository"
           

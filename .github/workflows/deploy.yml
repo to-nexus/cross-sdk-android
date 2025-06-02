@@ -132,18 +132,19 @@ jobs:
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+          WC_CLOUD_PROJECT_ID: ${{ secrets.WC_CLOUD_PROJECT_ID }}
         run: |
           echo "🔨 Building modules in dependency order..."
           
-          # Check if signing is configured
-          if [ -z "$SIGNING_KEY_ID" ] || [ -z "$SIGNING_KEY" ] || [ -z "$SIGNING_PASSWORD" ]; then
-            echo "⚠️  Signing secrets not configured - artifacts will not be signed"
-          else
+          # Check if signing is configured and set environment variables conditionally
+          if [ -n "${{ secrets.SIGNING_KEY_ID }}" ] && [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
             echo "🔑 Signing secrets configured - artifacts will be signed"
+            export SIGNING_KEY_ID="${{ secrets.SIGNING_KEY_ID }}"
+            export SIGNING_KEY="${{ secrets.SIGNING_KEY }}"
+            export SIGNING_PASSWORD="${{ secrets.SIGNING_PASSWORD }}"
+          else
+            echo "⚠️  Signing secrets not configured - artifacts will not be signed"
           fi
           
           # Build foundation first (no dependencies)
@@ -177,12 +178,21 @@ jobs:
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
-          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-          CROSS_PROJECT_ID: ${{ vars.CROSS_PROJECT_ID }}
+          CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+          WC_CLOUD_PROJECT_ID: ${{ secrets.WC_CLOUD_PROJECT_ID }}
         run: |
           echo "🚀 Deploying SDK version ${{ steps.extract_version.outputs.version }} to Cross Nexus..."
+          
+          # Check if signing is configured and set environment variables conditionally
+          if [ -n "${{ secrets.SIGNING_KEY_ID }}" ] && [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
+            echo "🔑 Setting up signing for deployment..."
+            export SIGNING_KEY_ID="${{ secrets.SIGNING_KEY_ID }}"
+            export SIGNING_KEY="${{ secrets.SIGNING_KEY }}"
+            export SIGNING_PASSWORD="${{ secrets.SIGNING_PASSWORD }}"
+          else
+            echo "⚠️  Deploying without signing..."
+          fi
+          
           ./gradlew deployBoth --info --no-daemon
           
       - name: Create GitHub Release

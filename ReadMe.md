@@ -139,6 +139,7 @@ dependencies {
 
 | BOM   | [Core SDK](core/android) | [Sign SDK](protocol/sign) | [AppKit](product/appkit) |
 |-------|--------------------------|---------------------------|--------------------------|
+| 1.0.1 | 1.0.0                    | 1.0.1                     | 1.0.1                    |
 | 1.0.0 | 1.0.0                    | 1.0.0                     | 1.0.0                    |
 
 ## 🛠️ Development

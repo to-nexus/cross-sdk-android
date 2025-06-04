@@ -39,11 +39,40 @@ git tag -a "sdk-snap-v1.0.0" -m "Snapshot SDK v1.0.0"
 git push origin sdk-snap-v1.0.0
 ```
 
+**⚠️ 중요: 버전 관리 방식**
+- **태그 버전**: 릴리즈 식별용 (예: `sdk-v1.0.0`)
+- **모듈 버전**: `Versions.kt`에서 정의된 각 모듈의 실제 버전 사용
+- 각 모듈은 서로 다른 버전을 가질 수 있음 (예: Foundation 1.0.0, Core 1.0.2, Sign 1.0.1)
+
 This will automatically:
-1. Extract version from tag (`sdk-v1.0.0` → `1.0.0` or `sdk-snap-v1.0.0` → `1.0.0-SNAPSHOT`)
-2. Update all module versions
-3. Deploy to appropriate Cross Nexus repository (Release or Snapshot)
-4. Create GitHub Release (Release deployments only)
+1. Use versions defined in `Versions.kt` for each module (not tag version)
+2. Deploy to appropriate Cross Nexus repository (Release or Snapshot)
+3. Create GitHub Release with actual module versions (Release deployments only)
+
+### 🔄 Version Management Workflow
+
+**Step 1: Update module versions**
+```bash
+# Update all modules to same version
+./gradlew manualBump -PBOM=1.2.0 -PFOUNDATION=1.2.0 -PCORE=1.2.0 -PSIGN=1.2.0 -PNOTIFY=1.2.0 -PAPPKIT=1.2.0 -PMODAL_CORE=1.2.0
+
+# Or update specific modules only
+./gradlew fixBump -Pmodules=APPKIT
+./gradlew releaseBump -Pmodules=CORE
+```
+
+**Step 2: Create and push tag**
+```bash
+git add buildSrc/src/main/kotlin/Versions.kt ReadMe.md
+git commit -m "Bump versions for release"
+git tag -a "sdk-v1.2.0" -m "Release SDK v1.2.0"
+git push origin main
+git push origin sdk-v1.2.0
+```
+
+**Step 3: Automated deployment**
+- GitHub Actions will automatically deploy using versions from `Versions.kt`
+- GitHub Release will show actual module versions, not tag version
 
 ### 🔧 Manual Deployment Options
 

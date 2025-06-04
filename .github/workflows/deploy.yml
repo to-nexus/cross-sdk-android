@@ -141,6 +141,35 @@ jobs:
           EOF
           echo "secrets.properties created from GitHub Secrets"
 
+      - name: Read actual module versions
+        id: read_versions
+        run: |
+          # Extract actual versions from Versions.kt
+          BOM_VER=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          FOUNDATION_VER=$(grep "const val FOUNDATION_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          CORE_VER=$(grep "const val CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          SIGN_VER=$(grep "const val SIGN_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NOTIFY_VER=$(grep "const val NOTIFY_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          APPKIT_VER=$(grep "const val APPKIT_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          MODAL_CORE_VER=$(grep "const val MODAL_CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          
+          echo "bom_version=$BOM_VER" >> $GITHUB_OUTPUT
+          echo "foundation_version=$FOUNDATION_VER" >> $GITHUB_OUTPUT
+          echo "core_version=$CORE_VER" >> $GITHUB_OUTPUT
+          echo "sign_version=$SIGN_VER" >> $GITHUB_OUTPUT
+          echo "notify_version=$NOTIFY_VER" >> $GITHUB_OUTPUT
+          echo "appkit_version=$APPKIT_VER" >> $GITHUB_OUTPUT
+          echo "modal_core_version=$MODAL_CORE_VER" >> $GITHUB_OUTPUT
+          
+          echo "📋 실제 모듈 버전들:"
+          echo "BOM: $BOM_VER"
+          echo "Foundation: $FOUNDATION_VER"
+          echo "Core: $CORE_VER"
+          echo "Sign: $SIGN_VER"
+          echo "Notify: $NOTIFY_VER"
+          echo "AppKit: $APPKIT_VER"
+          echo "Modal Core: $MODAL_CORE_VER"
+
       - name: Build and publish dependencies to local repository
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
@@ -192,12 +221,23 @@ jobs:
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
         run: |
           DEPLOY_TYPE=${{ steps.extract_version.outputs.deploy_type }}
-          VERSION=${{ steps.extract_version.outputs.version }}
+          TAG_VERSION=${{ steps.extract_version.outputs.version }}
+          
+          echo "🚀 Deploying SDK modules from tag ${{ steps.extract_version.outputs.tag_name }}"
+          echo "📋 실제 배포되는 모듈 버전들:"
+          echo "  BOM: ${{ steps.read_versions.outputs.bom_version }}"
+          echo "  Foundation: ${{ steps.read_versions.outputs.foundation_version }}"
+          echo "  Core: ${{ steps.read_versions.outputs.core_version }}"
+          echo "  Sign: ${{ steps.read_versions.outputs.sign_version }}"
+          echo "  Notify: ${{ steps.read_versions.outputs.notify_version }}"
+          echo "  AppKit: ${{ steps.read_versions.outputs.appkit_version }}"
+          echo "  Modal Core: ${{ steps.read_versions.outputs.modal_core_version }}"
+          echo ""
           
           if [ "$DEPLOY_TYPE" = "release" ]; then
-            echo "🚀 Deploying RELEASE version $VERSION to Cross Nexus Release repository..."
+            echo "📦 Deploying to Cross Nexus Release repository..."
           else
-            echo "🚀 Deploying SNAPSHOT version $VERSION to Cross Nexus Snapshot repository..."
+            echo "📦 Deploying to Cross Nexus Snapshot repository..."
           fi
           
           # Check if signing is configured and set environment variables conditionally
@@ -223,26 +263,38 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.extract_version.outputs.tag_name }}
-          release_name: Cross SDK Android v${{ steps.extract_version.outputs.version }}
+          release_name: Cross SDK Android Release ${{ steps.extract_version.outputs.tag_name }}
           body: |
-            ## Cross SDK Android v${{ steps.extract_version.outputs.version }}
+            ## Cross SDK Android Release ${{ steps.extract_version.outputs.tag_name }}
             
-            ### 📦 배포된 아티팩트 (Release)
+            ### 📦 배포된 아티팩트 (실제 버전)
             
             **BOM (권장):**
             ```kotlin
-            implementation(platform("io.crosstoken:android-bom:${{ steps.extract_version.outputs.version }}"))
+            implementation(platform("io.crosstoken:android-bom:${{ steps.read_versions.outputs.bom_version }}"))
             ```
             
-            **개별 모듈:**
+            **개별 모듈 (각각의 실제 버전):**
             ```kotlin
-            implementation("io.crosstoken:foundation:${{ steps.extract_version.outputs.version }}")
-            implementation("io.crosstoken:android-core:${{ steps.extract_version.outputs.version }}")
-            implementation("io.crosstoken:sign:${{ steps.extract_version.outputs.version }}")
-            implementation("io.crosstoken:notify:${{ steps.extract_version.outputs.version }}")
-            implementation("io.crosstoken:appkit:${{ steps.extract_version.outputs.version }}")
-            implementation("io.crosstoken:modal-core:${{ steps.extract_version.outputs.version }}")
+            implementation("io.crosstoken:foundation:${{ steps.read_versions.outputs.foundation_version }}")
+            implementation("io.crosstoken:android-core:${{ steps.read_versions.outputs.core_version }}")
+            implementation("io.crosstoken:sign:${{ steps.read_versions.outputs.sign_version }}")
+            implementation("io.crosstoken:notify:${{ steps.read_versions.outputs.notify_version }}")
+            implementation("io.crosstoken:appkit:${{ steps.read_versions.outputs.appkit_version }}")
+            implementation("io.crosstoken:modal-core:${{ steps.read_versions.outputs.modal_core_version }}")
             ```
+            
+            ### 📋 모듈별 버전 정보
+            
+            | 모듈 | 버전 |
+            |------|------|
+            | BOM | ${{ steps.read_versions.outputs.bom_version }} |
+            | Foundation | ${{ steps.read_versions.outputs.foundation_version }} |
+            | Core Android | ${{ steps.read_versions.outputs.core_version }} |
+            | Sign | ${{ steps.read_versions.outputs.sign_version }} |
+            | Notify | ${{ steps.read_versions.outputs.notify_version }} |
+            | AppKit | ${{ steps.read_versions.outputs.appkit_version }} |
+            | Modal Core | ${{ steps.read_versions.outputs.modal_core_version }} |
             
             ### 🏪 저장소 설정
             

@@ -1,6 +1,6 @@
-# **Cross WC SDK - Android**
+# **Cross SDK - Android**
 
-This repository contains Kotlin implementation of Cross WC SDK protocols for Android applications.
+This repository contains Kotlin implementation of Cross SDK protocols for Android applications.
 
 ## 🚀 Release & Deployment
 
@@ -16,7 +16,6 @@ Set the following environment variables (used in GitHub Actions):
 ```bash
 export NEXUS_USERNAME=your-nexus-username
 export NEXUS_PASSWORD=your-nexus-password
-export SIGNING_KEY_ID=your-signing-key-id
 export SIGNING_KEY=your-signing-key
 export SIGNING_PASSWORD=your-signing-password
 ```
@@ -39,10 +38,10 @@ git tag -a "sdk-snap-v1.0.0" -m "Snapshot SDK v1.0.0"
 git push origin sdk-snap-v1.0.0
 ```
 
-**⚠️ 중요: 버전 관리 방식**
-- **태그 버전**: 릴리즈 식별용 (예: `sdk-v1.0.0`)
-- **모듈 버전**: `Versions.kt`에서 정의된 각 모듈의 실제 버전 사용
-- 각 모듈은 서로 다른 버전을 가질 수 있음 (예: Foundation 1.0.0, Core 1.0.2, Sign 1.0.1)
+**⚠️ Important: Version Management**
+- **Tag version**: Version for release (eg: `sdk-v1.0.0`)
+- **Module version**: Versions of each module are defined in `Versions.kt`.
+- Each module has its own version. (eg: Foundation 1.0.0, Core 1.0.2, Sign 1.0.1)
 
 This will automatically:
 1. Use versions defined in `Versions.kt` for each module (not tag version)
@@ -168,7 +167,6 @@ dependencies {
 
 | BOM   | [Core SDK](core/android) | [Sign SDK](protocol/sign) | [AppKit](product/appkit) |
 |-------|--------------------------|---------------------------|--------------------------|
-| 1.0.1 | 1.0.0                    | 1.0.1                     | 1.0.1                    |
 | 1.0.0 | 1.0.0                    | 1.0.0                     | 1.0.0                    |
 
 ## 🛠️ Development
@@ -279,8 +277,8 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 
 **Android Keystore (for samples):**
 - `SAMPLE_KEYSTORE_BASE64` - Base64 encoded sample.keystore file
-- `CROSS_STORE_PASSWORD_UPLOAD` - Upload keystore password
-- `CROSS_KEY_PASSWORD_UPLOAD` - Upload key password
+- `CROSS_STORE_PASSWORD_UPLOAD` - Release keystore password
+- `CROSS_KEY_PASSWORD_UPLOAD` - Release key password
 - `CROSS_STORE_PASSWORD_INTERNAL` - Internal keystore password
 - `CROSS_KEY_PASSWORD_INTERNAL` - Internal key password
 - `CROSS_STORE_PASSWORD_DEBUG` - Debug keystore password
@@ -290,12 +288,12 @@ Configure the following secrets in your GitHub repository (Settings → Secrets 
 Configure the following variables in your GitHub repository (Settings → Secrets and variables → Actions → Variables):
 
 **Android Keystore Paths:**
-- `CROSS_FILENAME_UPLOAD` - Upload keystore file path (e.g., ./sample.keystore)
+- `CROSS_FILENAME_UPLOAD` - Release keystore file path (e.g., ./sample.keystore)
 - `CROSS_FILENAME_INTERNAL` - Internal keystore file path (e.g., ./sample.keystore)
 - `CROSS_FILENAME_DEBUG` - Debug keystore file path (e.g., ./sample.keystore)
 
 **Android Keystore Aliases:**
-- `CROSS_KEYSTORE_ALIAS` - Upload keystore alias
+- `CROSS_KEYSTORE_ALIAS` - Release keystore alias
 - `CROSS_KEYSTORE_ALIAS_DEBUG` - Debug keystore alias
 
 **SDK Configuration:**
@@ -314,4 +312,4 @@ base64 sample.keystore | xclip -selection clipboard  # Linux
 
 ## 📄 License
 
-Cross WC SDK is released under the Apache 2.0 license. [See LICENSE](/LICENSE) for details.
+Cross SDK is released under the Apache 2.0 license. [See LICENSE](/LICENSE) for details.

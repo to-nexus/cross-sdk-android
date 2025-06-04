@@ -161,7 +161,7 @@ jobs:
           echo "appkit_version=$APPKIT_VER" >> $GITHUB_OUTPUT
           echo "modal_core_version=$MODAL_CORE_VER" >> $GITHUB_OUTPUT
           
-          echo "📋 실제 모듈 버전들:"
+          echo "📋 Module versions:"
           echo "BOM: $BOM_VER"
           echo "Foundation: $FOUNDATION_VER"
           echo "Core: $CORE_VER"
@@ -224,7 +224,7 @@ jobs:
           TAG_VERSION=${{ steps.extract_version.outputs.version }}
           
           echo "🚀 Deploying SDK modules from tag ${{ steps.extract_version.outputs.tag_name }}"
-          echo "📋 실제 배포되는 모듈 버전들:"
+          echo "📋 Deployed module versions:"
           echo "  BOM: ${{ steps.read_versions.outputs.bom_version }}"
           echo "  Foundation: ${{ steps.read_versions.outputs.foundation_version }}"
           echo "  Core: ${{ steps.read_versions.outputs.core_version }}"
@@ -267,14 +267,14 @@ jobs:
           body: |
             ## Cross SDK Android Release ${{ steps.extract_version.outputs.tag_name }}
             
-            ### 📦 배포된 아티팩트 (실제 버전)
+            ### 📦 Deployed Artifacts (Release)
             
-            **BOM (권장):**
+            **BOM (Recommended):**
             ```kotlin
             implementation(platform("io.crosstoken:android-bom:${{ steps.read_versions.outputs.bom_version }}"))
             ```
             
-            **개별 모듈 (각각의 실제 버전):**
+            **Individual Modules:**
             ```kotlin
             implementation("io.crosstoken:foundation:${{ steps.read_versions.outputs.foundation_version }}")
             implementation("io.crosstoken:android-core:${{ steps.read_versions.outputs.core_version }}")
@@ -284,9 +284,9 @@ jobs:
             implementation("io.crosstoken:modal-core:${{ steps.read_versions.outputs.modal_core_version }}")
             ```
             
-            ### 📋 모듈별 버전 정보
+            ### 📋 Versions Per Modules
             
-            | 모듈 | 버전 |
+            | Module | Version |
             |------|------|
             | BOM | ${{ steps.read_versions.outputs.bom_version }} |
             | Foundation | ${{ steps.read_versions.outputs.foundation_version }} |
@@ -296,7 +296,7 @@ jobs:
             | AppKit | ${{ steps.read_versions.outputs.appkit_version }} |
             | Modal Core | ${{ steps.read_versions.outputs.modal_core_version }} |
             
-            ### 🏪 저장소 설정
+            ### 🏪 Setup Repository
             
             ```kotlin
             repositories {
@@ -310,32 +310,32 @@ jobs:
             }
             ```
             
-            ### 🚀 태그 기반 배포 방법
+            ### 🚀 Deploying with a Tag
             
             ```bash
-            # 릴리즈 배포
+            # deploy release
             git tag -a "sdk-v1.0.0" -m "Release v1.0.0"
             git push origin sdk-v1.0.0
             
-            # 스냅샷 배포  
+            # deploy snapshot
             git tag -a "sdk-snap-v1.0.0" -m "Snapshot v1.0.0"
             git push origin sdk-snap-v1.0.0
             ```
             
-            ### 🔧 로컬 배포 방법
+            ### 🔧 Deploying Local
             
             ```bash
-            # 릴리즈 저장소에만 배포
+            # deploy to release repository
             ./gradlew deploy -Ptype=release
             
-            # 스냅샷 저장소에만 배포 (개발용)
+            # deploy to snapshot repository (for development)
             ./gradlew deploySnap -Ptype=snap
             
-            # 두 저장소 모두 배포
+            # deploy to both repositories
             ./gradlew deployBoth
             ```
             
-            ### 📍 저장소 주소
+            ### 📍 Repository Address
             - **Release**: https://package.cross-nexus.com/repository/cross-sdk-android/
             - **Snapshot**: https://package.cross-nexus.com/repository/cross-sdk-android-snap/
           draft: false

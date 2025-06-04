@@ -64,12 +64,12 @@ task<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
 
-// Cross Nexus용 배포 작업들
+// deploy to Cross Nexus
 tasks.register("deploy") {
     group = "publishing"
     description = "Deploy to Cross Nexus Release repository only"
     doFirst {
-        println("🚀 Release 리포지토리에만 배포합니다...")
+        println("🚀 Deploying to release repository only.")
     }
     dependsOn(
         ":foundation:publishAllPublicationsToCrossNexusReleaseRepository",
@@ -86,7 +86,7 @@ tasks.register("deploySnap") {
     group = "publishing"
     description = "Deploy to Cross Nexus Snapshot repository only"
     doFirst {
-        println("🚀 Snapshot 리포지토리에만 배포합니다...")
+        println("🚀 Deploying to snapshot repository only.")
     }
     dependsOn(
         ":foundation:publishAllPublicationsToCrossNexusSnapshotRepository",
@@ -103,12 +103,12 @@ tasks.register("deployBoth") {
     group = "publishing"
     description = "Deploy to both Cross Nexus Release and Snapshot repositories"
     doFirst {
-        println("🚀 Release와 Snapshot 리포지토리 모두에 배포합니다...")
+        println("🚀 Deploying to both release and snapshot repositories.")
     }
     dependsOn("deploy", "deploySnap")
 }
 
-// 환경별 배포 태스크들
+// deploy tasks per environment
 tasks.register("deployDev") {
     group = "publishing"
     description = "Deploy to Dev environment with Cross Nexus"

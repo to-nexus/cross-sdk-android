@@ -90,7 +90,6 @@ afterEvaluate {
         }
     }
     
-    // 배포 타입에 따른 리포지토리 분기
     val deployType = project.findProperty("type") as String? ?: "both"
     
     tasks.withType<PublishToMavenRepository>().configureEach {

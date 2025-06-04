@@ -28,7 +28,7 @@ tasks.register("releaseAllSDKs") {
     }
 }
 
-// Cross Nexus용 배포 태스크 추가
+// task for Cross Nexus
 tasks.register("releaseAllSDKsToCrossNexus") {
     group = "publishing"
     description = "Release all SDKs to Cross Nexus repositories (both release and snapshot)"

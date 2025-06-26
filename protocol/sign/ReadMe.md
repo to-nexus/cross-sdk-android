@@ -1,6 +1,6 @@
-# **Cross WC Sign - Kotlin**
+# **Cross Sign - Kotlin**
 
-Kotlin implementation of Cross WC Sign protocol for Android applications.
+Kotlin implementation of Cross Sign protocol for Android applications.
 
 ![Maven Central](https://img.shields.io/maven-central/v/io.crosstoken/sign)
 

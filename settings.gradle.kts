@@ -1,4 +1,4 @@
-rootProject.name = "Cross WC SDK Android"
+rootProject.name = "Cross SDK Android"
 
 val excludedDirs = listOf(
     "undefined",

@@ -1,6 +1,6 @@
-# **Cross WC SDK - Android**
+# **Cross SDK - Android**
 
-This repository contains Kotlin implementation of Cross WC SDK protocols for Android applications.
+This repository contains Kotlin implementation of Cross SDK protocols for Android applications.
 
 ####
 
@@ -60,4 +60,4 @@ dependencies {
 
 ## License
 
-Cross WC SDK is released under the Apache 2.0 license. [See LICENSE](/LICENSE) for details.
+Cross SDK is released under the Apache 2.0 license. [See LICENSE](/LICENSE) for details.

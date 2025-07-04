@@ -30,24 +30,24 @@ android {
 
     buildTypes {
         val appLink = "https://dev-cross-sdk-js.crosstoken.io"
-        val params = "projectId=${getSecretProperty("CROSS_PROJECT_ID")}"
+        val projectId = getSecretProperty("CROSS_PROJECT_ID")
 
         getByName("release") {
             manifestPlaceholders["appLink"] = appLink
             buildConfigField("String", "DAPP_APP_LINK", "\"$appLink\"")
-            buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
+            buildConfigField("String", "PROJECT_ID", "\"${projectId}\"")
         }
 
         getByName("internal") {
             manifestPlaceholders["appLink"] = appLink
             buildConfigField("String", "DAPP_APP_LINK", "\"$appLink\"")
-            buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
+            buildConfigField("String", "PROJECT_ID", "\"${projectId}\"")
         }
 
         getByName("debug") {
             manifestPlaceholders["appLink"] = appLink
             buildConfigField("String", "DAPP_APP_LINK", "\"$appLink\"")
-            buildConfigField("String", "RELAY_SERVER_URL", "\"wss://cross-relay.crosstoken.io/ws?${params}\"")
+            buildConfigField("String", "PROJECT_ID", "\"${projectId}\"")
         }
     }
 

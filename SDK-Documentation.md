@@ -28,7 +28,6 @@ Cross SDK Android provides a robust framework for building decentralized applica
 
 - 🔗 **Wallet Connection**: Easy integration with multiple wallets
 - 🔐 **Blockchain Interactions**: Support for signing, transactions, and more
-- 📊 **Event Tracking**: Comprehensive analytics and telemetry
 - 🎨 **UI Components**: Pre-built components for rapid development
 - 📱 **Deep Links**: Seamless app-to-app communication
 - 🌙 **Theme Support**: Dark/Light mode with customization
@@ -381,16 +380,6 @@ Stores events in local database for offline tracking.
 
 ```kotlin
 class InsertEventUseCase {
-    suspend operator fun invoke(props: Props)
-}
-```
-
-#### InsertTelemetryEventUseCase
-
-Stores telemetry events for performance monitoring.
-
-```kotlin
-class InsertTelemetryEventUseCase {
     suspend operator fun invoke(props: Props)
 }
 ```

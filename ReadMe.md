@@ -130,12 +130,9 @@ Add the Cross Nexus repository to your `build.gradle.kts`:
 
 ```kotlin
 repositories {
+    maven { url = uri("https://jitpack.io") }
     maven {
         url = uri("https://package.cross-nexus.com/repository/cross-sdk-android/")
-        credentials {
-            username = "your-nexus-username"
-            password = "your-nexus-password"
-        }
     }
 }
 ```

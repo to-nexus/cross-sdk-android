@@ -45,7 +45,6 @@ fun getGetWalletAssetsParams(account: String): String {
         .put("chainFilter", JSONArray().put("0xa")) //hardcoded chain filter
         .toString()
 }
-
 enum class Chains(
     val chainName: String,
     val chainNamespace: String,
@@ -59,7 +58,7 @@ enum class Chains(
 ) {
 
     CROSS_MAIN(
-        chainName = "Cross",
+        chainName = "Cross Mainnet",
         chainNamespace = Info.Eth.chain,
         chainReference = "612055",
         icon = R.drawable.ic_cross,
@@ -69,7 +68,7 @@ enum class Chains(
         order = 1
     ),
     BSC_MAIN(
-        chainName = "BNB Smart Chain",
+        chainName = "BNB Smart Chain (Mainnet)",
         chainNamespace = Info.Eth.chain,
         chainReference = "56",
         icon = R.drawable.bnb,
@@ -78,7 +77,6 @@ enum class Chains(
         events = Info.Eth.defaultEvents,
         order = 2
     ),
-
     /*ETHEREUM_MAIN(
         chainName = "Ethereum",
         chainNamespace = Info.Eth.chain,
@@ -89,15 +87,26 @@ enum class Chains(
         events = Info.Eth.defaultEvents,
         order = 3
     ),*/
+    KAIA_MAINNET (
+        chainName = "Kaia Mainnet",
+        chainNamespace = Info.Eth.chain,
+        chainReference = "8217",
+        icon = R.drawable.kaia,
+        color = "#4E35FF",
+        methods = Info.Eth.defaultMethods,
+        events = Info.Eth.defaultEvents,
+        order = 4
+    ),
+
     CROSS_ZONEZERO(
-        chainName = "Cross ZoneZero",
+        chainName = "CROSS Testnet",
         chainNamespace = Info.Eth.chain,
         chainReference = "612044",
         icon = R.drawable.ic_cross,
         color = "#ff20e2bb",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 4
+        order = 5
     ),
 
     /*ETHEREUM_SEPOLIA(
@@ -108,17 +117,27 @@ enum class Chains(
         color = "#617de8",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 5
+        order = 6
     ),*/
     BSC_TESTNET(
-        chainName = "BNB Smart Chain Testnet",
+        chainName = "BNB Smart Chain (Testnet)",
         chainNamespace = Info.Eth.chain,
         chainReference = "97",
         icon = R.drawable.bnb,
         color = "#F3BA2F",
         methods = Info.Eth.defaultMethods,
         events = Info.Eth.defaultEvents,
-        order = 6
+        order = 7
+    ),
+    KAIA_TESTNET (
+        chainName = "Kaia Kairos",
+        chainNamespace = Info.Eth.chain,
+        chainReference = "1001",
+        icon = R.drawable.kaia,
+        color = "#4E35FF",
+        methods = Info.Eth.defaultMethods,
+        events = Info.Eth.defaultEvents,
+        order = 8
     );
 
     sealed class Info {

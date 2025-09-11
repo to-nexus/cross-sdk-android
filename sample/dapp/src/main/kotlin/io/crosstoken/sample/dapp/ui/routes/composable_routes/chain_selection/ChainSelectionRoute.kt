@@ -90,12 +90,12 @@ fun ChainSelectionRoute(navController: NavController, dispatcher: CoroutineDispa
 
     handleSignEvents(viewModel, navController, context) { pairingUri = PairingUri(uri = "", isReCaps = false) }
     ChainSelectionScreen(
-        composableScope,
-        dispatcher,
+        composableScope = composableScope,
+        dispatcher = dispatcher,
         chains = chainsState,
         awaitingState = awaitingProposalResponse,
         pairingUri = pairingUri,
-        context,
+        context = context,
         onDialogDismiss = { pairingUri = PairingUri(uri = "", isReCaps = false) },
         onChainClick = viewModel::updateChainSelectState,
         onConnectClick = { onConnectClick(viewModel, navController, context) },

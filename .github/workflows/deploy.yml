@@ -198,8 +198,23 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Set repository URLs based on branch
+        run: |
+          if [[ "${{ github.ref_name }}" == ci/* ]]; then
+            echo "NEXUS_RELEASE_URL=https://package.cross-nexus.com/repository/dev-cross-sdk-android/" >> $GITHUB_ENV
+            echo "NEXUS_SNAPSHOT_URL=https://package.cross-nexus.com/repository/dev-cross-sdk-android-snap/" >> $GITHUB_ENV
+            echo "🌿 CI branch detected - using dev repositories"
+          else
+            echo "NEXUS_RELEASE_URL=https://package.cross-nexus.com/repository/cross-sdk-android/" >> $GITHUB_ENV
+            echo "NEXUS_SNAPSHOT_URL=https://package.cross-nexus.com/repository/cross-sdk-android-snap/" >> $GITHUB_ENV
+            echo "🌿 Main branch detected - using production repositories"
+          fi
           
       - name: Generate changeset
+        env:
+          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
+          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
           DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
           VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
@@ -223,6 +238,9 @@ jobs:
 
       - name: Handle version bumping
         id: version
+        env:
+          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
+          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
           DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
           VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
@@ -238,27 +256,37 @@ jobs:
           echo ""
           echo "🎯 Changed modules from detection: $CHANGED_MODULES"
           
-          # Main 브랜치 push시 자동 버전 범프 로직
-          if [ "${{ github.event_name }}" = "push" ] && [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
-            echo "🤖 Auto version bump detected for main branch push"
-            
-            # 커밋 메시지 분석으로 범프 타입 결정
-            LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-            echo "Last commit: $LAST_COMMIT_MSG"
-            
-            if echo "$LAST_COMMIT_MSG" | grep -q "^feat\|BREAKING CHANGE"; then
-              AUTO_BUMP_TYPE="release"
-              echo "🚀 Detected feature/breaking change → minor bump"
-            elif echo "$LAST_COMMIT_MSG" | grep -q "^fix\|^perf"; then
-              AUTO_BUMP_TYPE="fix"  
-              echo "🐛 Detected fix/perf → patch bump"
+          # Main 브랜치 push시 자동 버전 범프 및 배포 타입 설정
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              echo "🚀 Main branch push detected - will deploy to both release and snapshot"
+              DEPLOY_TYPE="both"
+              
+              if [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
+                echo "🤖 Auto version bump detected for main branch push"
+                
+                # 커밋 메시지 분석으로 범프 타입 결정
+                LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+                echo "Last commit: $LAST_COMMIT_MSG"
+                
+                if echo "$LAST_COMMIT_MSG" | grep -q "^feat\|BREAKING CHANGE"; then
+                  AUTO_BUMP_TYPE="release"
+                  echo "🚀 Detected feature/breaking change → minor bump"
+                elif echo "$LAST_COMMIT_MSG" | grep -q "^fix\|^perf"; then
+                  AUTO_BUMP_TYPE="fix"  
+                  echo "🐛 Detected fix/perf → patch bump"
+                else
+                  AUTO_BUMP_TYPE="fix"
+                  echo "📝 Default → patch bump"
+                fi
+                
+                VERSION_BUMP="$AUTO_BUMP_TYPE"
+                echo "🔄 Auto version bump type: $VERSION_BUMP"
+              fi
             else
-              AUTO_BUMP_TYPE="fix"
-              echo "📝 Default → patch bump"
+              echo "🌿 CI branch push detected - will deploy to snapshot only"
+              DEPLOY_TYPE="snapshot"
             fi
-            
-            VERSION_BUMP="$AUTO_BUMP_TYPE"
-            echo "🔄 Auto version bump type: $VERSION_BUMP"
           fi
           
           # 버전 범프 실행
@@ -438,6 +466,12 @@ jobs:
           echo "  - Snapshot: $NEXUS_SNAPSHOT_URL"
           echo ""
           echo "🎯 Changed modules: ${{ needs.detect-changes.outputs.changed_modules }}"
+          echo "📋 Deploy strategy:"
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "  - Main branch → Both release and snapshot repositories"
+          else
+            echo "  - CI branch → Snapshot repository only"
+          fi
           echo ""
           echo "📋 Current versions:"
           echo "  BOM: ${{ steps.versions.outputs.bom_version }}"

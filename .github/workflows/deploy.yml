@@ -435,6 +435,15 @@ jobs:
               else
                 DEPLOY_TYPE="snapshot"
                 echo "🌿 CI branch → Snapshot only"
+                
+                # CI 브랜치에서는 스냅샷 버전으로 변환
+                if ! grep -q "SNAPSHOT" buildSrc/src/main/kotlin/Versions.kt; then
+                  echo "🔄 Converting versions to SNAPSHOT format for CI branch..."
+                  sed -i 's/const val \([A-Z_]*_VERSION\) = "\([^"]*\)"/const val \1 = "\2-SNAPSHOT"/g' buildSrc/src/main/kotlin/Versions.kt
+                  echo "✅ Versions converted to SNAPSHOT format"
+                else
+                  echo "📋 Versions already in SNAPSHOT format"
+                fi
               fi
               
               VERSION_BUMP="none"  # 이미 완료됨
@@ -687,6 +696,18 @@ jobs:
           # Push 이벤트 처리 - Versions.kt 변경 확인 (deploy job)
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "📋 Push deployment - Versions.kt was already changed"
+            
+            # CI 브랜치에서는 스냅샷 버전으로 변환
+            if [[ "${{ github.ref_name }}" == ci/* ]]; then
+              if ! grep -q "SNAPSHOT" buildSrc/src/main/kotlin/Versions.kt; then
+                echo "🔄 Converting versions to SNAPSHOT format for CI branch..."
+                sed -i 's/const val \([A-Z_]*_VERSION\) = "\([^"]*\)"/const val \1 = "\2-SNAPSHOT"/g' buildSrc/src/main/kotlin/Versions.kt
+                echo "✅ Versions converted to SNAPSHOT format"
+              else
+                echo "📋 Versions already in SNAPSHOT format"
+              fi
+            fi
+            
             # 버전 범프는 이미 완료된 상태
             VERSION_BUMP="none"
           else

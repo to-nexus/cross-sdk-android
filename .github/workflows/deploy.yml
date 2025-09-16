@@ -236,8 +236,17 @@ jobs:
             ./gradlew autoChangeset -Pversion="$CURRENT_BOM" -Ptype="$CHANGESET_TYPE"
           fi
 
-      - name: Create secrets.properties for version bumping
+      - name: Handle version bumping
+        id: version
+        env:
+          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
+          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
+          DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
+          VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
+          MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
+          CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
+          
           cat > secrets.properties << EOF
           CROSS_FILENAME_UPLOAD=${{ vars.CROSS_FILENAME_UPLOAD }}
           CROSS_STORE_PASSWORD_UPLOAD=${{ secrets.CROSS_STORE_PASSWORD_UPLOAD }}
@@ -253,17 +262,6 @@ jobs:
           CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
           EOF
 
-      - name: Handle version bumping
-        id: version
-        env:
-          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
-          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
-        run: |
-          DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
-          VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
-          MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
-          CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
-          
           echo "🔄 Version management started..."
           echo "📋 Configuration:"
           echo "  - Deploy type: $DEPLOY_TYPE"

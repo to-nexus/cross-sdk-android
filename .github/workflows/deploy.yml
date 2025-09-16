@@ -1,7 +1,7 @@
 name: Deploy SDK (Improved)
 
 on:
-  # 1. Main 브랜치 및 CI 브랜치 push/merge 시 자동 배포
+  # 1. Main 브랜치 push 시 Versions.kt 변경된 경우에만 배포
   push:
     branches:
       - main
@@ -12,7 +12,7 @@ on:
       - '.github/**'
       - '!.github/workflows/**'
   
-  # 2. 수동 배포 (가장 유연함)
+  # 2. 수동 배포
   workflow_dispatch:
     inputs:
       deploy_type:
@@ -331,9 +331,14 @@ jobs:
             echo "🔍 Generating dynamic module mapping..."
             
             # Versions.kt에서 모든 모듈 상수 추출
+            echo "🔍 Parsing Versions.kt..."
             VERSION_CONSTANTS=$(grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | \
               grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME" | \
-              sed 's/.*const val \([^_]*\)_VERSION.*/\1/')
+              sed 's/.*const val \([A-Z_]*\)_VERSION.*/\1/' | \
+              grep -v "^$")
+            
+            echo "🔍 Raw grep output:"
+            grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME"
             
             echo "📋 Available Gradle constants:"
             echo "$VERSION_CONSTANTS" | while read const; do
@@ -414,46 +419,43 @@ jobs:
           echo ""
           echo "🎯 Changed modules from detection: $CHANGED_MODULES"
           
-          # Main/CI 브랜치 push시 자동 버전 범프 및 배포 타입 설정
+          # Push 이벤트 처리 - Versions.kt 변경 확인
           if [ "${{ github.event_name }}" = "push" ]; then
-            if [ "${{ github.ref_name }}" = "main" ]; then
-              echo "🚀 Main branch push detected - will deploy to both release and snapshot"
-              DEPLOY_TYPE="both"
-            else
-              echo "🌿 CI branch push detected - will deploy to snapshot only"
-              DEPLOY_TYPE="snapshot"
-            fi
+            echo "🔍 Checking if Versions.kt was changed in this push..."
             
-            # Main과 CI 브랜치 모두에서 자동 버전 범프
-            if [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
+            # Versions.kt 변경 여부 확인
+            VERSIONS_CHANGED=$(echo "$changed_files" | grep -c "buildSrc/src/main/kotlin/Versions.kt" || echo "0")
+            
+            if [ "$VERSIONS_CHANGED" -gt 0 ]; then
+              echo "✅ Versions.kt was changed - proceeding with deployment"
+              
+              # 브랜치별 배포 타입 설정
               if [ "${{ github.ref_name }}" = "main" ]; then
-                echo "🤖 Auto version bump detected for main branch push"
+                echo "🚀 Main branch - will deploy to both release and snapshot"
+                DEPLOY_TYPE="both"
               else
-                echo "🤖 Auto version bump detected for CI branch push"
+                echo "🌿 CI branch - will deploy to snapshot only"
+                DEPLOY_TYPE="snapshot"
               fi
               
-              # 커밋 메시지 분석으로 범프 타입 결정
-              LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-              echo "Last commit: $LAST_COMMIT_MSG"
-              
-              if echo "$LAST_COMMIT_MSG" | grep -q "^feat\|BREAKING CHANGE"; then
-                AUTO_BUMP_TYPE="release"
-                echo "🚀 Detected feature/breaking change → minor bump"
-              elif echo "$LAST_COMMIT_MSG" | grep -q "^fix\|^perf"; then
-                AUTO_BUMP_TYPE="fix"  
-                echo "🐛 Detected fix/perf → patch bump"
-              else
-                AUTO_BUMP_TYPE="fix"
-                echo "📝 Default → patch bump"
-              fi
-              
-              VERSION_BUMP="$AUTO_BUMP_TYPE"
-              echo "🔄 Auto version bump type: $VERSION_BUMP"
+              # 버전 범프는 이미 완료된 상태로 간주
+              VERSION_BUMP="none"
+              echo "📋 Version bump already completed (Versions.kt changed)"
+            else
+              echo "⏭️ Versions.kt was not changed - skipping deployment"
+              echo "💡 Only code changes detected, no version bump needed"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              exit 0
             fi
+          else
+            echo "📋 Manual workflow - version bumps must be explicitly specified"
           fi
           
-          # 버전 범프 실행
-          if [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
+          # 버전 범프 실행 (push 이벤트에서는 건너뛰기)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "⏭️ Push event - skipping version bump (Versions.kt already changed)"
+            
+          elif [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
             echo "📝 Manual version bump: $MANUAL_VERSIONS"
             # 수동 버전 설정 파싱 및 적용
             IFS=',' read -ra VERSIONS <<< "$MANUAL_VERSIONS"
@@ -464,7 +466,7 @@ jobs:
             ./gradlew manualBump $GRADLE_ARGS
             
           elif [ "$VERSION_BUMP" = "fix" ]; then
-            echo "🔧 Fix version bump"
+            echo "🔧 Fix version bump (manual workflow)"
             
             GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
             echo "📋 Final Gradle modules: $GRADLE_MODULES"
@@ -573,9 +575,14 @@ jobs:
             echo "🔍 Generating dynamic module mapping..."
             
             # Versions.kt에서 모든 모듈 상수 추출
+            echo "🔍 Parsing Versions.kt..."
             VERSION_CONSTANTS=$(grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | \
               grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME" | \
-              sed 's/.*const val \([^_]*\)_VERSION.*/\1/')
+              sed 's/.*const val \([A-Z_]*\)_VERSION.*/\1/' | \
+              grep -v "^$")
+            
+            echo "🔍 Raw grep output:"
+            grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME"
             
             echo "📋 Available Gradle constants:"
             echo "$VERSION_CONSTANTS" | while read const; do
@@ -631,33 +638,20 @@ jobs:
             echo "$gradle_modules"
           }
           
-          # 자동 버전 범프 로직 (version-preparation과 동일)
-          if [ "${{ github.event_name }}" = "push" ] && [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
-            if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == ci/* ]]; then
-              echo "🤖 Auto version bump detected for ${{ github.ref_name }} push"
-              
-              LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-              echo "Last commit: $LAST_COMMIT_MSG"
-              
-              AUTO_BUMP_TYPE="fix"
-              if echo "$LAST_COMMIT_MSG" | grep -qE "^feat(\(.+\))?:|^perf(\(.+\))?:"; then
-                AUTO_BUMP_TYPE="release"
-                echo "📝 Feature/Performance → minor bump"
-              elif echo "$LAST_COMMIT_MSG" | grep -q "BREAKING CHANGE"; then
-                AUTO_BUMP_TYPE="release"
-                echo "📝 Breaking change → minor bump"
-              else
-                AUTO_BUMP_TYPE="fix"
-                echo "📝 Default → patch bump"
-              fi
-              
-              VERSION_BUMP="$AUTO_BUMP_TYPE"
-              echo "🔄 Auto version bump type: $VERSION_BUMP"
-            fi
+          # Push 이벤트 처리 - Versions.kt 변경 확인 (deploy job)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "📋 Push deployment - Versions.kt was already changed"
+            # 버전 범프는 이미 완료된 상태
+            VERSION_BUMP="none"
+          else
+            echo "📋 Manual deployment - version bumps will be applied"
           fi
           
-          # 버전 범프 실행 (version-preparation과 동일)
-          if [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
+          # 버전 범프 실행 (push 이벤트에서는 건너뛰기)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "⏭️ Push event - skipping version bump (Versions.kt already changed)"
+            
+          elif [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
             echo "📝 Manual version bump: $MANUAL_VERSIONS"
             IFS=',' read -ra VERSIONS <<< "$MANUAL_VERSIONS"
             GRADLE_ARGS=""

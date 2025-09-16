@@ -236,6 +236,23 @@ jobs:
             ./gradlew autoChangeset -Pversion="$CURRENT_BOM" -Ptype="$CHANGESET_TYPE"
           fi
 
+      - name: Create secrets.properties for version bumping
+        run: |
+          cat > secrets.properties << EOF
+          CROSS_FILENAME_UPLOAD=${{ vars.CROSS_FILENAME_UPLOAD }}
+          CROSS_STORE_PASSWORD_UPLOAD=${{ secrets.CROSS_STORE_PASSWORD_UPLOAD }}
+          CROSS_KEY_PASSWORD_UPLOAD=${{ secrets.CROSS_KEY_PASSWORD_UPLOAD }}
+          CROSS_KEYSTORE_ALIAS=${{ vars.CROSS_KEYSTORE_ALIAS }}
+          CROSS_FILENAME_INTERNAL=${{ vars.CROSS_FILENAME_INTERNAL }}
+          CROSS_STORE_PASSWORD_INTERNAL=${{ secrets.CROSS_STORE_PASSWORD_INTERNAL }}
+          CROSS_KEY_PASSWORD_INTERNAL=${{ secrets.CROSS_KEY_PASSWORD_INTERNAL }}
+          CROSS_FILENAME_DEBUG=${{ vars.CROSS_FILENAME_DEBUG }}
+          CROSS_STORE_PASSWORD_DEBUG=${{ secrets.CROSS_STORE_PASSWORD_DEBUG }}
+          CROSS_KEY_PASSWORD_DEBUG=${{ secrets.CROSS_KEY_PASSWORD_DEBUG }}
+          CROSS_KEYSTORE_ALIAS_DEBUG=${{ vars.CROSS_KEYSTORE_ALIAS_DEBUG }}
+          CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
+          EOF
+
       - name: Handle version bumping
         id: version
         env:

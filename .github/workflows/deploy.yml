@@ -92,32 +92,71 @@ jobs:
         id: changes
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🔧 Manual workflow dispatch detected"
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "changed_modules=all" >> $GITHUB_OUTPUT
             exit 0
           fi
           
+          echo "🔍 Detecting module changes from recent commit..."
+          
           # 최근 커밋에서 변경된 모듈 감지
           changed_files=$(git diff --name-only HEAD~1 HEAD)
           changed_modules=""
           
+          echo "📝 Changed files:"
+          echo "$changed_files" | while read -r file; do
+            if [ -n "$file" ]; then
+              echo "  - $file"
+            fi
+          done
+          
+          echo ""
+          echo "🔄 Analyzing module changes..."
+          
           if echo "$changed_files" | grep -q "^foundation/"; then
+            echo "  ✅ Foundation module changed"
             changed_modules="$changed_modules,foundation"
           fi
           if echo "$changed_files" | grep -q "^core/"; then
+            echo "  ✅ Core module changed"
             changed_modules="$changed_modules,core"
           fi
           if echo "$changed_files" | grep -q "^protocol/"; then
+            echo "  ✅ Protocol module changed"
             changed_modules="$changed_modules,protocol"
           fi
           if echo "$changed_files" | grep -q "^product/"; then
+            echo "  ✅ Product module changed"
             changed_modules="$changed_modules,product"
           fi
           
+          # buildSrc 변경 감지
+          if echo "$changed_files" | grep -q "^buildSrc/"; then
+            echo "  ⚙️ Build configuration changed"
+            changed_modules="$changed_modules,buildSrc"
+          fi
+          
+          # 기타 파일 변경 감지
+          other_files=$(echo "$changed_files" | grep -v -E "^(foundation|core|protocol|product|buildSrc)/" | head -5)
+          if [ -n "$other_files" ]; then
+            echo "  📄 Other files changed:"
+            echo "$other_files" | while read -r file; do
+              if [ -n "$file" ]; then
+                echo "    - $file"
+              fi
+            done
+          fi
+          
           if [ -n "$changed_modules" ]; then
+            final_modules="${changed_modules#,}"
+            echo ""
+            echo "🎯 Final result: Changes detected in modules: $final_modules"
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "changed_modules=${changed_modules#,}" >> $GITHUB_OUTPUT
+            echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
           else
+            echo ""
+            echo "⏭️ No module changes detected (documentation/config only)"
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "changed_modules=" >> $GITHUB_OUTPUT
           fi
@@ -172,9 +211,13 @@ jobs:
           CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
           
           echo "🔄 Version management started..."
-          echo "Deploy type: $DEPLOY_TYPE"
-          echo "Version bump: $VERSION_BUMP"
-          echo "Changed modules: $CHANGED_MODULES"
+          echo "📋 Configuration:"
+          echo "  - Deploy type: $DEPLOY_TYPE"
+          echo "  - Version bump: $VERSION_BUMP"
+          echo "  - Event: ${{ github.event_name }}"
+          echo "  - Branch: ${{ github.ref_name }}"
+          echo ""
+          echo "🎯 Changed modules from detection: $CHANGED_MODULES"
           
           # Main 브랜치 push시 자동 버전 범프 로직
           if [ "${{ github.event_name }}" = "push" ] && [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
@@ -370,6 +413,13 @@ jobs:
           DEPLOY_TYPE="${{ needs.version-management.outputs.deploy_type }}"
           
           echo "🚀 Deploying to Cross Nexus ($DEPLOY_TYPE)..."
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "📦 Target repositories:"
+          echo "  - Release: $NEXUS_RELEASE_URL"
+          echo "  - Snapshot: $NEXUS_SNAPSHOT_URL"
+          echo ""
+          echo "🎯 Changed modules: ${{ needs.detect-changes.outputs.changed_modules }}"
+          echo ""
           echo "📋 Current versions:"
           echo "  BOM: ${{ steps.versions.outputs.bom_version }}"
           echo "  Foundation: ${{ steps.versions.outputs.foundation_version }}"

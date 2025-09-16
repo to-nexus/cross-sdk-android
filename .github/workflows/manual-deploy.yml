@@ -194,10 +194,18 @@ jobs:
           MODULES="${{ github.event.inputs.modules }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
           
-          echo "🚀 Starting deployment..."
-          echo "Deploy type: $DEPLOY_TYPE"
-          echo "Target modules: ${MODULES:-'all'}"
-          echo "Dry run: $DRY_RUN"
+          echo "🚀 Starting manual deployment..."
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          echo "📦 Target repositories:"
+          echo "  - Release: $NEXUS_RELEASE_URL"
+          echo "  - Snapshot: $NEXUS_SNAPSHOT_URL"
+          echo ""
+          echo "📋 Configuration:"
+          echo "  - Deploy type: $DEPLOY_TYPE"
+          echo "  - Target modules: ${MODULES:-'all'}"
+          echo "  - Version action: ${{ github.event.inputs.version_action }}"
+          echo "  - Dry run: $DRY_RUN"
+          echo ""
           
           if [ "$DRY_RUN" = "true" ]; then
             echo "🧪 DRY RUN MODE - Building only, no deployment"

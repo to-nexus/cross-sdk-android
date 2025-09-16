@@ -133,58 +133,72 @@ jobs:
           echo ""
           echo "🔄 Analyzing module changes..."
           
-          # 동적 모듈 감지 함수
-          detect_module_changes() {
-            local files="$1"
-            local modules=""
-            
-            # 알려진 모듈 매핑 (확장 가능)
-            declare -A module_map=(
-              ["foundation/"]="foundation"
-              ["core/android/"]="android-core"
-              ["core/bom/"]="android-bom"
-              ["core/modal/"]="modal-core"
-              ["protocol/sign/"]="sign"
-              ["protocol/notify/"]="notify"
-              ["product/appkit/"]="appkit"
-            )
-            
-            # 각 모듈 경로 확인
-            for path in "${!module_map[@]}"; do
-              if echo "$files" | grep -q "^$path"; then
-                module_name="${module_map[$path]}"
-                echo "  ✅ $module_name module changed (path: $path)"
-                modules="$modules,$module_name"
-              fi
-            done
-            
-            # 새로운 모듈 자동 감지 (settings.gradle.kts 기반)
-            if [ -f "settings.gradle.kts" ]; then
-              while IFS= read -r line; do
-                if echo "$line" | grep -q 'include('; then
-                  module_path=$(echo "$line" | sed 's/.*include("//' | sed 's/").*//')
-                  if [ -n "$module_path" ]; then
-                    # :path:to:module -> path/to/module/
-                    dir_path=$(echo "$module_path" | sed 's/:/\//g' | sed 's/^\/*//' | sed 's/$/\//')
-                    module_name=$(echo "$module_path" | sed 's/.*://')
-                    
-                    # 이미 알려진 매핑이 아닌 경우만 체크
-                    if [[ ! " ${!module_map[@]} " =~ " ${dir_path} " ]]; then
-                      if echo "$files" | grep -q "^$dir_path"; then
-                        echo "  🆕 $module_name module changed (auto-detected: $dir_path)"
-                        modules="$modules,$module_name"
-                      fi
-                    fi
-                  fi
-                fi
-              done < settings.gradle.kts
-            fi
-            
-            echo "${modules#,}"
-          }
+          # 변경된 모듈 감지
+          changed_modules=""
           
-          # 모듈 변경사항 감지 실행
-          changed_modules=$(detect_module_changes "$changed_files")
+          # 알려진 모듈 매핑 확인
+          if echo "$changed_files" | grep -q "^foundation/"; then
+            echo "  ✅ foundation module changed"
+            changed_modules="$changed_modules,foundation"
+          fi
+          
+          # Core 하위 모듈들 개별 감지
+          if echo "$changed_files" | grep -q "^core/android/"; then
+            echo "  ✅ android-core module changed"
+            changed_modules="$changed_modules,android-core"
+          fi
+          if echo "$changed_files" | grep -q "^core/bom/"; then
+            echo "  ✅ android-bom module changed"
+            changed_modules="$changed_modules,android-bom"
+          fi
+          if echo "$changed_files" | grep -q "^core/modal/"; then
+            echo "  ✅ modal-core module changed"
+            changed_modules="$changed_modules,modal-core"
+          fi
+          
+          # Protocol 하위 모듈들 개별 감지
+          if echo "$changed_files" | grep -q "^protocol/sign/"; then
+            echo "  ✅ sign module changed"
+            changed_modules="$changed_modules,sign"
+          fi
+          if echo "$changed_files" | grep -q "^protocol/notify/"; then
+            echo "  ✅ notify module changed"
+            changed_modules="$changed_modules,notify"
+          fi
+          
+          # Product 하위 모듈들 개별 감지
+          if echo "$changed_files" | grep -q "^product/appkit/"; then
+            echo "  ✅ appkit module changed"
+            changed_modules="$changed_modules,appkit"
+          fi
+          
+          # 새로운 모듈 자동 감지 (settings.gradle.kts 기반)
+          if [ -f "settings.gradle.kts" ]; then
+            echo "  🔍 Checking for new modules in settings.gradle.kts..."
+            while IFS= read -r line; do
+              if echo "$line" | grep -q 'include('; then
+                module_path=$(echo "$line" | sed 's/.*include("//' | sed 's/").*//')
+                if [ -n "$module_path" ]; then
+                  # :path:to:module -> path/to/module/
+                  dir_path=$(echo "$module_path" | sed 's/:/\//g' | sed 's/^\/*//' | sed 's/$/\//')
+                  module_name=$(echo "$module_path" | sed 's/.*://')
+                  
+                  # 이미 알려진 매핑이 아닌 경우만 체크
+                  case "$dir_path" in
+                    "foundation/"|"core/android/"|"core/bom/"|"core/modal/"|"protocol/sign/"|"protocol/notify/"|"product/appkit/")
+                      # 이미 처리된 모듈들은 스킵
+                      ;;
+                    *)
+                      if echo "$changed_files" | grep -q "^$dir_path"; then
+                        echo "  🆕 $module_name module changed (auto-detected: $dir_path)"
+                        changed_modules="$changed_modules,$module_name"
+                      fi
+                      ;;
+                  esac
+                fi
+              fi
+            done < settings.gradle.kts
+          fi
           
           # buildSrc 변경 감지 (별도 처리)
           build_config_changed=false
@@ -204,37 +218,45 @@ jobs:
             done
           fi
           
-          if [ -n "$changed_modules" ] || [ "$build_config_changed" = "true" ]; then
-            final_modules="${changed_modules#,}"
-            echo ""
+          # 결과 정리 및 출력
+          echo ""
+          
+          # 쉼표 제거 및 정리
+          if [ -n "$changed_modules" ]; then
+            final_modules=$(echo "$changed_modules" | sed 's/^,//' | sed 's/,$//')
+          else
+            final_modules=""
+          fi
+          
+          # 최종 결과 출력
+          if [ -n "$final_modules" ] || [ "$build_config_changed" = "true" ]; then
             if [ -n "$final_modules" ]; then
               echo "🎯 Final result: Changes detected in modules: $final_modules"
               if [ "$build_config_changed" = "true" ]; then
                 echo "⚙️ Build configuration also changed"
               fi
-              echo "has_changes=true" >> $GITHUB_OUTPUT
-              echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
             else
               echo "🎯 Final result: Only build configuration changed"
-              echo "has_changes=true" >> $GITHUB_OUTPUT
-              echo "changed_modules=" >> $GITHUB_OUTPUT
             fi
+            
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
           else
-            echo ""
             echo "⏭️ No module changes detected (documentation/config only)"
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "changed_modules=" >> $GITHUB_OUTPUT
           fi
 
-  # 버전 관리
-  version-management:
-    name: Version Management
+  # 버전 준비 (커밋하지 않음)
+  version-preparation:
+    name: Version Preparation
     needs: detect-changes
     if: needs.detect-changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.version.outputs.should_deploy }}
       deploy_type: ${{ steps.version.outputs.deploy_type }}
+      version_changed: ${{ steps.version.outputs.version_changed }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -378,33 +400,35 @@ jobs:
             echo "⏭️ No version bump requested"
           fi
           
-          # 변경사항이 있으면 커밋 (changeset과 버전 파일 모두)
+          # 버전 변경 여부 체크 (커밋하지 않음)
           if [ -n "$(git status --porcelain)" ]; then
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add buildSrc/src/main/kotlin/Versions.kt .changeset/
-            git commit -m "chore: bump versions and generate changeset for $DEPLOY_TYPE deployment"
-            git push
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "📋 Version changes prepared (not committed yet):"
+            git status --porcelain
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "📋 No version changes needed"
           fi
           
           echo "should_deploy=true" >> $GITHUB_OUTPUT
           echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
           
           # 현재 버전들 출력
-          echo "📋 Updated versions:" 
+          echo "📋 Prepared versions:" 
           grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt
 
   # 실제 배포
   deploy:
     name: Deploy to Cross Nexus
-    needs: [detect-changes, version-management]
-    if: needs.version-management.outputs.should_deploy == 'true'
+    needs: [detect-changes, version-preparation]
+    if: needs.version-preparation.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main  # 버전 범프 후 최신 상태
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
           
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -448,6 +472,63 @@ jobs:
           CROSS_KEYSTORE_ALIAS_DEBUG=${{ vars.CROSS_KEYSTORE_ALIAS_DEBUG }}
           CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
           EOF
+
+      - name: Re-apply version changes
+        if: needs.version-preparation.outputs.version_changed == 'true'
+        run: |
+          echo "🔄 Re-applying version changes for deployment..."
+          
+          DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
+          VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
+          MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
+          CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
+          
+          # 자동 버전 범프 로직 (version-preparation과 동일)
+          if [ "${{ github.event_name }}" = "push" ] && [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
+            if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == ci/* ]]; then
+              echo "🤖 Auto version bump detected for ${{ github.ref_name }} push"
+              
+              LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+              echo "Last commit: $LAST_COMMIT_MSG"
+              
+              AUTO_BUMP_TYPE="fix"
+              if echo "$LAST_COMMIT_MSG" | grep -qE "^feat(\(.+\))?:|^perf(\(.+\))?:"; then
+                AUTO_BUMP_TYPE="release"
+                echo "📝 Feature/Performance → minor bump"
+              elif echo "$LAST_COMMIT_MSG" | grep -q "BREAKING CHANGE"; then
+                AUTO_BUMP_TYPE="release"
+                echo "📝 Breaking change → minor bump"
+              else
+                AUTO_BUMP_TYPE="fix"
+                echo "📝 Default → patch bump"
+              fi
+              
+              VERSION_BUMP="$AUTO_BUMP_TYPE"
+              echo "🔄 Auto version bump type: $VERSION_BUMP"
+            fi
+          fi
+          
+          # 버전 범프 실행 (version-preparation과 동일)
+          if [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
+            echo "📝 Manual version bump: $MANUAL_VERSIONS"
+            IFS=',' read -ra VERSIONS <<< "$MANUAL_VERSIONS"
+            GRADLE_ARGS=""
+            for version in "${VERSIONS[@]}"; do
+              GRADLE_ARGS="$GRADLE_ARGS -P$version"
+            done
+            ./gradlew manualBump $GRADLE_ARGS
+            
+          elif [ "$VERSION_BUMP" = "fix" ]; then
+            echo "🔧 Fix version bump"
+            ./gradlew fixBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            
+          elif [ "$VERSION_BUMP" = "release" ]; then
+            echo "🚀 Release version bump"  
+            ./gradlew releaseBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            
+          else
+            echo "⏭️ No version bump requested"
+          fi
 
       - name: Read current versions
         id: versions
@@ -523,7 +604,7 @@ jobs:
           NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
           NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
-          DEPLOY_TYPE="${{ needs.version-management.outputs.deploy_type }}"
+          DEPLOY_TYPE="${{ needs.version-preparation.outputs.deploy_type }}"
           
           echo "🚀 Deploying to Cross Nexus ($DEPLOY_TYPE)..."
           echo "🌿 Branch: ${{ github.ref_name }}"
@@ -562,7 +643,7 @@ jobs:
 
       - name: Determine Release Tag Strategy
         id: tag_strategy
-        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-management.outputs.deploy_type == 'release' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-preparation.outputs.deploy_type == 'release' }}
         run: |
           # 모든 모듈 버전 읽기
           BOM_VER=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
@@ -657,7 +738,7 @@ jobs:
           echo "bom_changed=$BOM_CHANGED" >> $GITHUB_OUTPUT
 
       - name: Create Git Release Tag
-        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-management.outputs.deploy_type == 'release' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-preparation.outputs.deploy_type == 'release' }}
         run: |
           TAG_VERSION="${{ steps.tag_strategy.outputs.tag_version }}"
           TAG_TYPE="${{ steps.tag_strategy.outputs.tag_type }}"
@@ -709,7 +790,7 @@ jobs:
           git push origin "$TAG"
 
       - name: Create GitHub Release
-        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-management.outputs.deploy_type == 'release' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-preparation.outputs.deploy_type == 'release' }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -773,11 +854,48 @@ jobs:
           draft: false
           prerelease: false
 
+      # 🎯 배포 성공 후에만 버전 커밋
+      - name: Commit version changes after successful deployment
+        if: needs.version-preparation.outputs.version_changed == 'true'
+        run: |
+          echo "✅ Deployment successful! Committing version changes..."
+          
+          # Git 설정
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # 변경사항 확인
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "📋 Changes to commit:"
+            git status --porcelain
+            
+            # 버전 파일과 changeset 커밋
+            git add buildSrc/src/main/kotlin/Versions.kt .changeset/
+            
+            DEPLOY_TYPE="${{ needs.version-preparation.outputs.deploy_type }}"
+            COMMIT_MSG="chore: bump versions after successful $DEPLOY_TYPE deployment"
+            
+            # 변경된 모듈 정보 추가
+            if [ -n "${{ needs.detect-changes.outputs.changed_modules }}" ]; then
+              COMMIT_MSG="$COMMIT_MSG
+
+Changed modules: ${{ needs.detect-changes.outputs.changed_modules }}
+Repository: ${{ github.ref_name == 'main' && 'production' || 'development' }}"
+            fi
+            
+            git commit -m "$COMMIT_MSG"
+            git push
+            
+            echo "✅ Version changes committed successfully!"
+          else
+            echo "📋 No changes to commit"
+          fi
+
       - name: Dry run summary
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: |
           echo "🧪 DRY RUN - 실제 배포는 수행되지 않았습니다"
-          echo "배포 타입: ${{ needs.version-management.outputs.deploy_type }}"
+          echo "배포 타입: ${{ needs.version-preparation.outputs.deploy_type }}"
           echo "대상 모듈: ${{ github.event.inputs.target_modules || '전체' }}"
 
   # 배포 후 알림

@@ -168,6 +168,18 @@ jobs:
             echo "  $line"
           done
 
+      - name: Set repository URLs based on branch
+        run: |
+          if [[ "${{ github.ref_name }}" == ci/* ]]; then
+            echo "NEXUS_RELEASE_URL=https://package.cross-nexus.com/repository/dev-cross-sdk-android/" >> $GITHUB_ENV
+            echo "NEXUS_SNAPSHOT_URL=https://package.cross-nexus.com/repository/dev-cross-sdk-android-snap/" >> $GITHUB_ENV
+            echo "🌿 CI branch detected - using dev repositories"
+          else
+            echo "NEXUS_RELEASE_URL=https://package.cross-nexus.com/repository/cross-sdk-android/" >> $GITHUB_ENV
+            echo "NEXUS_SNAPSHOT_URL=https://package.cross-nexus.com/repository/cross-sdk-android-snap/" >> $GITHUB_ENV
+            echo "🌿 Main branch detected - using production repositories"
+          fi
+
       - name: Build and deploy
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
@@ -175,6 +187,8 @@ jobs:
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
+          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
           DEPLOY_TYPE="${{ github.event.inputs.deploy_type }}"
           MODULES="${{ github.event.inputs.modules }}"

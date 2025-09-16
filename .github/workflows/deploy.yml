@@ -1,10 +1,11 @@
 name: Deploy SDK (Improved)
 
 on:
-  # 1. Main 브랜치 push/merge 시 자동 배포
+  # 1. Main 브랜치 및 CI 브랜치 push/merge 시 자동 배포
   push:
     branches:
       - main
+      - 'ci/**'
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -311,6 +312,19 @@ jobs:
           echo "appkit_version=$APPKIT_VER" >> $GITHUB_OUTPUT
           echo "modal_core_version=$MODAL_CORE_VER" >> $GITHUB_OUTPUT
 
+      - name: Set repository URLs based on branch
+        id: repo_urls
+        run: |
+          if [[ "${{ github.ref_name }}" == ci/* ]]; then
+            echo "NEXUS_RELEASE_URL=https://package.cross-nexus.com/repository/dev-cross-sdk-android/" >> $GITHUB_ENV
+            echo "NEXUS_SNAPSHOT_URL=https://package.cross-nexus.com/repository/dev-cross-sdk-android-snap/" >> $GITHUB_ENV
+            echo "🌿 CI branch detected - using dev repositories"
+          else
+            echo "NEXUS_RELEASE_URL=https://package.cross-nexus.com/repository/cross-sdk-android/" >> $GITHUB_ENV
+            echo "NEXUS_SNAPSHOT_URL=https://package.cross-nexus.com/repository/cross-sdk-android-snap/" >> $GITHUB_ENV
+            echo "🌿 Main branch detected - using production repositories"
+          fi
+
       - name: Build modules
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
@@ -318,6 +332,8 @@ jobs:
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
+          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
           echo "🔨 Building modules in dependency order..."
           
@@ -348,6 +364,8 @@ jobs:
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          NEXUS_RELEASE_URL: ${{ env.NEXUS_RELEASE_URL }}
+          NEXUS_SNAPSHOT_URL: ${{ env.NEXUS_SNAPSHOT_URL }}
         run: |
           DEPLOY_TYPE="${{ needs.version-management.outputs.deploy_type }}"
           
@@ -511,7 +529,7 @@ jobs:
           - AppKit: ${{ steps.versions.outputs.appkit_version }}
           - Modal Core: ${{ steps.versions.outputs.modal_core_version }}
           
-          🚀 Repository: https://package.cross-nexus.com/repository/cross-sdk-android/"
+          🚀 Repository: ${{ github.ref_name == 'main' && 'https://package.cross-nexus.com/repository/cross-sdk-android/' || startsWith(github.ref_name, 'ci/') && 'https://package.cross-nexus.com/repository/dev-cross-sdk-android/' || 'https://package.cross-nexus.com/repository/cross-sdk-android/' }}"
           
           git push origin "$TAG"
 
@@ -567,10 +585,12 @@ jobs:
             ```kotlin
             repositories {
                 maven {
-                    url = uri("https://package.cross-nexus.com/repository/cross-sdk-android/")
+                    url = uri("${{ github.ref_name == 'main' && 'https://package.cross-nexus.com/repository/cross-sdk-android/' || startsWith(github.ref_name, 'ci/') && 'https://package.cross-nexus.com/repository/dev-cross-sdk-android/' || 'https://package.cross-nexus.com/repository/cross-sdk-android/' }}")
                 }
             }
             ```
+            
+            ${{ startsWith(github.ref_name, 'ci/') && '> **⚠️ 개발 브랜치 배포**: 이 릴리즈는 `ci/` 브랜치에서 배포되어 개발용 리포지토리에 게시되었습니다.' || '' }}
             
             ### 📖 문서
             - [SDK Documentation](README.md)

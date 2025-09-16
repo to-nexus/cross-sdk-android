@@ -324,6 +324,72 @@ jobs:
           MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
           CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
           
+          # 🎯 동적 모듈 매핑 함수
+          convert_modules_to_gradle_format() {
+            local input_modules="$1"
+            
+            echo "🔍 Generating dynamic module mapping..."
+            
+            # Versions.kt에서 모든 모듈 상수 추출
+            VERSION_CONSTANTS=$(grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | \
+              grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME" | \
+              sed 's/.*const val \([^_]*\)_VERSION.*/\1/')
+            
+            echo "📋 Available Gradle constants:"
+            echo "$VERSION_CONSTANTS" | while read const; do
+              if [ -n "$const" ]; then
+                echo "  - $const"
+              fi
+            done
+            
+            # 동적 매핑 함수
+            map_module_to_gradle() {
+              local module="$1"
+              case "$module" in
+                "foundation") echo "FOUNDATION" ;;
+                "android-core") echo "CORE" ;;
+                "android-bom") echo "BOM" ;;
+                "modal-core") echo "MODAL_CORE" ;;
+                "sign") echo "SIGN" ;;
+                "notify") echo "NOTIFY" ;;
+                "appkit") echo "APPKIT" ;;
+                *)
+                  # 새 모듈의 경우 자동 매핑 시도
+                  # module-name -> MODULE_NAME 또는 MODULE
+                  local upper_module="${module^^}"
+                  local underscore_module="${module//-/_}"
+                  underscore_module="${underscore_module^^}"
+                  
+                  if echo "$VERSION_CONSTANTS" | grep -q "^${upper_module}$"; then
+                    echo "$upper_module"
+                  elif echo "$VERSION_CONSTANTS" | grep -q "^${underscore_module}$"; then
+                    echo "$underscore_module"
+                  else
+                    echo "⚠️ Unknown module: $module, using fallback: $upper_module" >&2
+                    echo "$upper_module"
+                  fi
+                  ;;
+              esac
+            }
+            
+            # 모듈 변환 실행
+            local gradle_modules=""
+            IFS=',' read -ra MODULES <<< "$input_modules"
+            for module in "${MODULES[@]}"; do
+              if [ -n "$module" ]; then
+                gradle_module=$(map_module_to_gradle "$module")
+                if [ -n "$gradle_modules" ]; then
+                  gradle_modules="$gradle_modules,$gradle_module"
+                else
+                  gradle_modules="$gradle_module"
+                fi
+                echo "  📦 $module → $gradle_module"
+              fi
+            done
+            
+            echo "$gradle_modules"
+          }
+          
           cat > secrets.properties << EOF
           CROSS_FILENAME_UPLOAD=${{ vars.CROSS_FILENAME_UPLOAD }}
           CROSS_STORE_PASSWORD_UPLOAD=${{ secrets.CROSS_STORE_PASSWORD_UPLOAD }}
@@ -399,11 +465,19 @@ jobs:
             
           elif [ "$VERSION_BUMP" = "fix" ]; then
             echo "🔧 Fix version bump"
-            ./gradlew fixBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            
+            GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
+            echo "📋 Final Gradle modules: $GRADLE_MODULES"
+            
+            ./gradlew fixBump -Pmodules="$GRADLE_MODULES"
             
           elif [ "$VERSION_BUMP" = "release" ]; then
-            echo "🚀 Release version bump"  
-            ./gradlew releaseBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            echo "🚀 Release version bump"
+            
+            GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
+            echo "📋 Final Gradle modules: $GRADLE_MODULES"
+            
+            ./gradlew releaseBump -Pmodules="$GRADLE_MODULES"
             
           else
             echo "⏭️ No version bump requested"
@@ -492,6 +566,71 @@ jobs:
           MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
           CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
           
+          # 🎯 동적 모듈 매핑 함수 (version-preparation과 동일)
+          convert_modules_to_gradle_format() {
+            local input_modules="$1"
+            
+            echo "🔍 Generating dynamic module mapping..."
+            
+            # Versions.kt에서 모든 모듈 상수 추출
+            VERSION_CONSTANTS=$(grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | \
+              grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME" | \
+              sed 's/.*const val \([^_]*\)_VERSION.*/\1/')
+            
+            echo "📋 Available Gradle constants:"
+            echo "$VERSION_CONSTANTS" | while read const; do
+              if [ -n "$const" ]; then
+                echo "  - $const"
+              fi
+            done
+            
+            # 동적 매핑 함수
+            map_module_to_gradle() {
+              local module="$1"
+              case "$module" in
+                "foundation") echo "FOUNDATION" ;;
+                "android-core") echo "CORE" ;;
+                "android-bom") echo "BOM" ;;
+                "modal-core") echo "MODAL_CORE" ;;
+                "sign") echo "SIGN" ;;
+                "notify") echo "NOTIFY" ;;
+                "appkit") echo "APPKIT" ;;
+                *)
+                  # 새 모듈의 경우 자동 매핑 시도
+                  local upper_module="${module^^}"
+                  local underscore_module="${module//-/_}"
+                  underscore_module="${underscore_module^^}"
+                  
+                  if echo "$VERSION_CONSTANTS" | grep -q "^${upper_module}$"; then
+                    echo "$upper_module"
+                  elif echo "$VERSION_CONSTANTS" | grep -q "^${underscore_module}$"; then
+                    echo "$underscore_module"
+                  else
+                    echo "⚠️ Unknown module: $module, using fallback: $upper_module" >&2
+                    echo "$upper_module"
+                  fi
+                  ;;
+              esac
+            }
+            
+            # 모듈 변환 실행
+            local gradle_modules=""
+            IFS=',' read -ra MODULES <<< "$input_modules"
+            for module in "${MODULES[@]}"; do
+              if [ -n "$module" ]; then
+                gradle_module=$(map_module_to_gradle "$module")
+                if [ -n "$gradle_modules" ]; then
+                  gradle_modules="$gradle_modules,$gradle_module"
+                else
+                  gradle_modules="$gradle_module"
+                fi
+                echo "  📦 $module → $gradle_module"
+              fi
+            done
+            
+            echo "$gradle_modules"
+          }
+          
           # 자동 버전 범프 로직 (version-preparation과 동일)
           if [ "${{ github.event_name }}" = "push" ] && [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
             if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == ci/* ]]; then
@@ -529,11 +668,19 @@ jobs:
             
           elif [ "$VERSION_BUMP" = "fix" ]; then
             echo "🔧 Fix version bump"
-            ./gradlew fixBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            
+            GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
+            echo "📋 Final Gradle modules: $GRADLE_MODULES"
+            
+            ./gradlew fixBump -Pmodules="$GRADLE_MODULES"
             
           elif [ "$VERSION_BUMP" = "release" ]; then
-            echo "🚀 Release version bump"  
-            ./gradlew releaseBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            echo "🚀 Release version bump"
+            
+            GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
+            echo "📋 Final Gradle modules: $GRADLE_MODULES"
+            
+            ./gradlew releaseBump -Pmodules="$GRADLE_MODULES"
             
           else
             echo "⏭️ No version bump requested"

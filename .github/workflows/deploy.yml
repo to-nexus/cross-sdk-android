@@ -401,8 +401,29 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "🔍 Checking if Versions.kt was changed..."
             
+            # 변경된 파일 목록 다시 가져오기
+            if [ "${{ github.ref_name }}" = "main" ]; then
+              changed_files=$(git diff --name-only HEAD~1..HEAD)
+            else
+              # CI 브랜치의 경우 main과 비교
+              git fetch origin main
+              changed_files=$(git diff --name-only origin/main..HEAD)
+            fi
+            
+            echo "📝 Changed files in this push:"
+            echo "$changed_files" | while read -r file; do
+              if [ -n "$file" ]; then
+                echo "  - $file"
+              fi
+            done
+            
             # Versions.kt 변경 여부 확인
             VERSIONS_CHANGED=$(echo "$changed_files" | grep -c "buildSrc/src/main/kotlin/Versions.kt" || echo "0")
+            
+            echo "🔍 Debug info:"
+            echo "  - Total changed files: $(echo "$changed_files" | wc -l)"
+            echo "  - Versions.kt matches: $VERSIONS_CHANGED"
+            echo "  - Looking for: buildSrc/src/main/kotlin/Versions.kt"
             
             if [ "$VERSIONS_CHANGED" -gt 0 ]; then
               echo "✅ Versions.kt changed - proceeding with deployment"

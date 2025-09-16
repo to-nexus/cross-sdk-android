@@ -133,27 +133,64 @@ jobs:
           echo ""
           echo "🔄 Analyzing module changes..."
           
-          if echo "$changed_files" | grep -q "^foundation/"; then
-            echo "  ✅ Foundation module changed"
-            changed_modules="$changed_modules,foundation"
-          fi
-          if echo "$changed_files" | grep -q "^core/"; then
-            echo "  ✅ Core module changed"
-            changed_modules="$changed_modules,core"
-          fi
-          if echo "$changed_files" | grep -q "^protocol/"; then
-            echo "  ✅ Protocol module changed"
-            changed_modules="$changed_modules,protocol"
-          fi
-          if echo "$changed_files" | grep -q "^product/"; then
-            echo "  ✅ Product module changed"
-            changed_modules="$changed_modules,product"
-          fi
+          # 동적 모듈 감지 함수
+          detect_module_changes() {
+            local files="$1"
+            local modules=""
+            
+            # 알려진 모듈 매핑 (확장 가능)
+            declare -A module_map=(
+              ["foundation/"]="foundation"
+              ["core/android/"]="android-core"
+              ["core/bom/"]="android-bom"
+              ["core/modal/"]="modal-core"
+              ["protocol/sign/"]="sign"
+              ["protocol/notify/"]="notify"
+              ["product/appkit/"]="appkit"
+            )
+            
+            # 각 모듈 경로 확인
+            for path in "${!module_map[@]}"; do
+              if echo "$files" | grep -q "^$path"; then
+                module_name="${module_map[$path]}"
+                echo "  ✅ $module_name module changed (path: $path)"
+                modules="$modules,$module_name"
+              fi
+            done
+            
+            # 새로운 모듈 자동 감지 (settings.gradle.kts 기반)
+            if [ -f "settings.gradle.kts" ]; then
+              while IFS= read -r line; do
+                if echo "$line" | grep -q 'include('; then
+                  module_path=$(echo "$line" | sed 's/.*include("//' | sed 's/").*//')
+                  if [ -n "$module_path" ]; then
+                    # :path:to:module -> path/to/module/
+                    dir_path=$(echo "$module_path" | sed 's/:/\//g' | sed 's/^\/*//' | sed 's/$/\//')
+                    module_name=$(echo "$module_path" | sed 's/.*://')
+                    
+                    # 이미 알려진 매핑이 아닌 경우만 체크
+                    if [[ ! " ${!module_map[@]} " =~ " ${dir_path} " ]]; then
+                      if echo "$files" | grep -q "^$dir_path"; then
+                        echo "  🆕 $module_name module changed (auto-detected: $dir_path)"
+                        modules="$modules,$module_name"
+                      fi
+                    fi
+                  fi
+                fi
+              done < settings.gradle.kts
+            fi
+            
+            echo "${modules#,}"
+          }
           
-          # buildSrc 변경 감지
+          # 모듈 변경사항 감지 실행
+          changed_modules=$(detect_module_changes "$changed_files")
+          
+          # buildSrc 변경 감지 (별도 처리)
+          build_config_changed=false
           if echo "$changed_files" | grep -q "^buildSrc/"; then
             echo "  ⚙️ Build configuration changed"
-            changed_modules="$changed_modules,buildSrc"
+            build_config_changed=true
           fi
           
           # 기타 파일 변경 감지
@@ -167,12 +204,21 @@ jobs:
             done
           fi
           
-          if [ -n "$changed_modules" ]; then
+          if [ -n "$changed_modules" ] || [ "$build_config_changed" = "true" ]; then
             final_modules="${changed_modules#,}"
             echo ""
-            echo "🎯 Final result: Changes detected in modules: $final_modules"
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
+            if [ -n "$final_modules" ]; then
+              echo "🎯 Final result: Changes detected in modules: $final_modules"
+              if [ "$build_config_changed" = "true" ]; then
+                echo "⚙️ Build configuration also changed"
+              fi
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
+            else
+              echo "🎯 Final result: Only build configuration changed"
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "changed_modules=" >> $GITHUB_OUTPUT
+            fi
           else
             echo ""
             echo "⏭️ No module changes detected (documentation/config only)"
@@ -543,20 +589,26 @@ jobs:
             if echo "$CHANGED_FILES" | grep -q "foundation/"; then
               CHANGED_MODULES="$CHANGED_MODULES,foundation:$FOUNDATION_VER"
             fi
-            if echo "$CHANGED_FILES" | grep -q "core/"; then
-              CHANGED_MODULES="$CHANGED_MODULES,core:$CORE_VER"
+            # Core 하위 모듈들 개별 감지
+            if echo "$CHANGED_FILES" | grep -q "core/android/"; then
+              CHANGED_MODULES="$CHANGED_MODULES,android-core:$CORE_VER"
             fi
-            if echo "$CHANGED_FILES" | grep -q "protocol/sign"; then
+            if echo "$CHANGED_FILES" | grep -q "core/bom/"; then
+              CHANGED_MODULES="$CHANGED_MODULES,android-bom:$BOM_VER"
+            fi
+            if echo "$CHANGED_FILES" | grep -q "core/modal/"; then
+              CHANGED_MODULES="$CHANGED_MODULES,modal-core:$MODAL_CORE_VER"
+            fi
+            # Protocol 하위 모듈들 개별 감지
+            if echo "$CHANGED_FILES" | grep -q "protocol/sign/"; then
               CHANGED_MODULES="$CHANGED_MODULES,sign:$SIGN_VER"
             fi
-            if echo "$CHANGED_FILES" | grep -q "protocol/notify"; then
+            if echo "$CHANGED_FILES" | grep -q "protocol/notify/"; then
               CHANGED_MODULES="$CHANGED_MODULES,notify:$NOTIFY_VER"
             fi
-            if echo "$CHANGED_FILES" | grep -q "product/appkit"; then
+            # Product 하위 모듈들 개별 감지
+            if echo "$CHANGED_FILES" | grep -q "product/appkit/"; then
               CHANGED_MODULES="$CHANGED_MODULES,appkit:$APPKIT_VER"
-            fi
-            if echo "$CHANGED_FILES" | grep -q "core/modal"; then
-              CHANGED_MODULES="$CHANGED_MODULES,modal-core:$MODAL_CORE_VER"
             fi
             
             # BOM 변경 확인

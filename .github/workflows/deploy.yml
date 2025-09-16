@@ -439,7 +439,7 @@ jobs:
                 # CI 브랜치에서는 스냅샷 버전으로 변환
                 if ! grep -q "SNAPSHOT" buildSrc/src/main/kotlin/Versions.kt; then
                   echo "🔄 Converting versions to SNAPSHOT format for CI branch..."
-                  sed -i 's/const val \([A-Z_]*_VERSION\) = "\([^"]*\)"/const val \1 = "\2-SNAPSHOT"/g' buildSrc/src/main/kotlin/Versions.kt
+                  sed -i 's/const val \([A-Z_]*_VERSION\) = "\([0-9]\+\.[0-9]\+\.[0-9]\+\)"/const val \1 = "\2-SNAPSHOT"/g' buildSrc/src/main/kotlin/Versions.kt
                   echo "✅ Versions converted to SNAPSHOT format"
                 else
                   echo "📋 Versions already in SNAPSHOT format"

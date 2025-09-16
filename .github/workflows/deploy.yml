@@ -1,91 +1,253 @@
-name: Deploy SDK to Cross Nexus
+name: Deploy SDK (Improved)
 
 on:
+  # 1. Main 브랜치 push/merge 시 자동 배포
   push:
-    tags:
-      - 'sdk-v*'
-      - 'sdk-snap-v*'
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/**'
+  
+  # 2. 수동 배포 (가장 유연함)
   workflow_dispatch:
     inputs:
-      version:
-        description: 'SDK version to deploy (e.g., 1.0.0)'
-        required: true
-        type: string
       deploy_type:
-        description: 'Deployment type'
+        description: '배포 타입'
         required: true
         type: choice
         options:
           - release
           - snapshot
+          - both
         default: release
+      
+      version_bump_type:
+        description: '버전 범프 타입'
+        required: false
+        type: choice
+        options:
+          - none
+          - fix
+          - release
+          - manual
+        default: none
+      
+      manual_versions:
+        description: '수동 버전 설정 (예: BOM=1.2.0,APPKIT=1.2.1)'
+        required: false
+        type: string
+        default: ''
+      
+      target_modules:
+        description: '배포할 모듈 (비어있으면 전체)'
+        required: false
+        type: string
+        default: ''
+        
+      dry_run:
+        description: '테스트 실행 (실제 배포 안함)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
   contents: write
 
 jobs:
+  # SonarQube 분석
   sonarqube:
     name: SonarQube Analysis
     runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_type == 'release' || github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  deploy:
-    name: Deploy SDK to Cross Nexus
-    needs: sonarqube
+  # 변경사항 감지
+  detect-changes:
+    name: Detect Changes
+    needs: [sonarqube]
+    if: always() && (needs.sonarqube.result == 'success' || needs.sonarqube.result == 'skipped')
     runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.changes.outputs.has_changes }}
+      changed_modules: ${{ steps.changes.outputs.changed_modules }}
     steps:
-      - name: Checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Detect module changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "changed_modules=all" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # 최근 커밋에서 변경된 모듈 감지
+          changed_files=$(git diff --name-only HEAD~1 HEAD)
+          changed_modules=""
+          
+          if echo "$changed_files" | grep -q "^foundation/"; then
+            changed_modules="$changed_modules,foundation"
+          fi
+          if echo "$changed_files" | grep -q "^core/"; then
+            changed_modules="$changed_modules,core"
+          fi
+          if echo "$changed_files" | grep -q "^protocol/"; then
+            changed_modules="$changed_modules,protocol"
+          fi
+          if echo "$changed_files" | grep -q "^product/"; then
+            changed_modules="$changed_modules,product"
+          fi
+          
+          if [ -n "$changed_modules" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "changed_modules=${changed_modules#,}" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "changed_modules=" >> $GITHUB_OUTPUT
+          fi
+
+  # 버전 관리
+  version-management:
+    name: Version Management
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.version.outputs.should_deploy }}
+      deploy_type: ${{ steps.version.outputs.deploy_type }}
+    steps:
+      - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Extract version from tag
-        id: extract_version
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Generate changeset
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            TAG_NAME=${GITHUB_REF#refs/tags/}
-            echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
+          VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
+          
+          # 현재 BOM 버전 가져오기
+          CURRENT_BOM=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          
+          if [ "$VERSION_BUMP" != "none" ]; then
+            echo "📝 Generating changeset for version bump..."
             
-            if [[ "$TAG_NAME" == sdk-snap-v* ]]; then
-              # SNAPSHOT version (sdk-snap-v1.0.0 -> 1.0.0-SNAPSHOT)
-              VERSION=$(echo $TAG_NAME | sed 's/^sdk-snap-v//')
-              VERSION="${VERSION}-SNAPSHOT"
-              DEPLOY_TYPE="snap"
-              echo "is_snapshot=true" >> $GITHUB_OUTPUT
-              echo "Deploying SNAPSHOT version: $VERSION"
-            else
-              # Release version (sdk-v1.0.0 -> 1.0.0)
-              VERSION=$(echo $TAG_NAME | sed 's/^sdk-v//')
-              DEPLOY_TYPE="release"
-              echo "is_snapshot=false" >> $GITHUB_OUTPUT
-              echo "Deploying RELEASE version: $VERSION"
-            fi
+            # 버전 범프 타입에 따른 changeset 타입 결정
+            case "$VERSION_BUMP" in
+              "release") CHANGESET_TYPE="minor" ;;
+              "fix") CHANGESET_TYPE="patch" ;;
+              "manual") CHANGESET_TYPE="minor" ;;
+              *) CHANGESET_TYPE="patch" ;;
+            esac
             
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
-          else
-            # Manual workflow dispatch
-            DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'release' }}"
-            VERSION="${{ github.event.inputs.version }}"
-            
-            if [ "$DEPLOY_TYPE" = "snapshot" ]; then
-              VERSION="${VERSION}-SNAPSHOT"
-              echo "is_snapshot=true" >> $GITHUB_OUTPUT
-              echo "tag_name=sdk-snap-v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-            else
-              echo "is_snapshot=false" >> $GITHUB_OUTPUT
-              echo "tag_name=sdk-v$VERSION" >> $GITHUB_OUTPUT
-            fi
-            
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
+            ./gradlew autoChangeset -Pversion="$CURRENT_BOM" -Ptype="$CHANGESET_TYPE"
           fi
+
+      - name: Handle version bumping
+        id: version
+        run: |
+          DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'snapshot' }}"
+          VERSION_BUMP="${{ github.event.inputs.version_bump_type || 'none' }}"
+          MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
+          CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
+          
+          echo "🔄 Version management started..."
+          echo "Deploy type: $DEPLOY_TYPE"
+          echo "Version bump: $VERSION_BUMP"
+          echo "Changed modules: $CHANGED_MODULES"
+          
+          # Main 브랜치 push시 자동 버전 범프 로직
+          if [ "${{ github.event_name }}" = "push" ] && [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
+            echo "🤖 Auto version bump detected for main branch push"
+            
+            # 커밋 메시지 분석으로 범프 타입 결정
+            LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+            echo "Last commit: $LAST_COMMIT_MSG"
+            
+            if echo "$LAST_COMMIT_MSG" | grep -q "^feat\|BREAKING CHANGE"; then
+              AUTO_BUMP_TYPE="release"
+              echo "🚀 Detected feature/breaking change → minor bump"
+            elif echo "$LAST_COMMIT_MSG" | grep -q "^fix\|^perf"; then
+              AUTO_BUMP_TYPE="fix"  
+              echo "🐛 Detected fix/perf → patch bump"
+            else
+              AUTO_BUMP_TYPE="fix"
+              echo "📝 Default → patch bump"
+            fi
+            
+            VERSION_BUMP="$AUTO_BUMP_TYPE"
+            echo "🔄 Auto version bump type: $VERSION_BUMP"
+          fi
+          
+          # 버전 범프 실행
+          if [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
+            echo "📝 Manual version bump: $MANUAL_VERSIONS"
+            # 수동 버전 설정 파싱 및 적용
+            IFS=',' read -ra VERSIONS <<< "$MANUAL_VERSIONS"
+            GRADLE_ARGS=""
+            for version in "${VERSIONS[@]}"; do
+              GRADLE_ARGS="$GRADLE_ARGS -P$version"
+            done
+            ./gradlew manualBump $GRADLE_ARGS
+            
+          elif [ "$VERSION_BUMP" = "fix" ]; then
+            echo "🔧 Fix version bump"
+            ./gradlew fixBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            
+          elif [ "$VERSION_BUMP" = "release" ]; then
+            echo "🚀 Release version bump"  
+            ./gradlew releaseBump -Pmodules="${{ needs.detect-changes.outputs.changed_modules }}"
+            
+          else
+            echo "⏭️ No version bump requested"
+          fi
+          
+          # 변경사항이 있으면 커밋 (changeset과 버전 파일 모두)
+          if [ -n "$(git status --porcelain)" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add buildSrc/src/main/kotlin/Versions.kt .changeset/
+            git commit -m "chore: bump versions and generate changeset for $DEPLOY_TYPE deployment"
+            git push
+          fi
+          
+          echo "should_deploy=true" >> $GITHUB_OUTPUT
+          echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
+          
+          # 현재 버전들 출력
+          echo "📋 Updated versions:" 
+          grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt
+
+  # 실제 배포
+  deploy:
+    name: Deploy to Cross Nexus
+    needs: [detect-changes, version-management]
+    if: needs.version-management.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main  # 버전 범프 후 최신 상태
           
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -100,8 +262,7 @@ jobs:
         run: yes | sdkmanager --licenses || true
         
       - name: Install Android SDK components
-        run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -110,18 +271,9 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
           
       - name: Create local.properties
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "Android SDK location: $ANDROID_HOME"
-
-      - name: Create sample.keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore
-          echo "keystore created from GitHub Secrets"
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       - name: Create secrets.properties
         run: |
@@ -139,12 +291,10 @@ jobs:
           CROSS_KEYSTORE_ALIAS_DEBUG=${{ vars.CROSS_KEYSTORE_ALIAS_DEBUG }}
           CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
           EOF
-          echo "secrets.properties created from GitHub Secrets"
 
-      - name: Read actual module versions
-        id: read_versions
+      - name: Read current versions
+        id: versions
         run: |
-          # Extract actual versions from Versions.kt
           BOM_VER=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
           FOUNDATION_VER=$(grep "const val FOUNDATION_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
           CORE_VER=$(grep "const val CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
@@ -160,183 +310,292 @@ jobs:
           echo "notify_version=$NOTIFY_VER" >> $GITHUB_OUTPUT
           echo "appkit_version=$APPKIT_VER" >> $GITHUB_OUTPUT
           echo "modal_core_version=$MODAL_CORE_VER" >> $GITHUB_OUTPUT
-          
-          echo "📋 Module versions:"
-          echo "BOM: $BOM_VER"
-          echo "Foundation: $FOUNDATION_VER"
-          echo "Core: $CORE_VER"
-          echo "Sign: $SIGN_VER"
-          echo "Notify: $NOTIFY_VER"
-          echo "AppKit: $APPKIT_VER"
-          echo "Modal Core: $MODAL_CORE_VER"
 
-      - name: Build and publish dependencies to local repository
+      - name: Build modules
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
           echo "🔨 Building modules in dependency order..."
           
-          # Check if signing is configured and set environment variables conditionally
-          if [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
-            echo "🔑 Signing secrets configured - artifacts will be signed"
-            export SIGNING_KEY="${{ secrets.SIGNING_KEY }}"
-            export SIGNING_PASSWORD="${{ secrets.SIGNING_PASSWORD }}"
+          TARGET_MODULES="${{ github.event.inputs.target_modules }}"
+          if [ -z "$TARGET_MODULES" ]; then
+            # 전체 모듈 빌드
+            ./gradlew :foundation:publishToMavenLocal --no-daemon
+            ./gradlew :core:android:publishToMavenLocal --no-daemon
+            ./gradlew :core:modal:publishToMavenLocal --no-daemon
+            ./gradlew :protocol:sign:publishToMavenLocal --no-daemon
+            ./gradlew :protocol:notify:publishToMavenLocal --no-daemon
+            ./gradlew :product:appkit:publishToMavenLocal --no-daemon
+            ./gradlew :core:bom:publishToMavenLocal --no-daemon
           else
-            echo "⚠️  Signing secrets not configured - artifacts will not be signed"
+            # 특정 모듈만 빌드
+            IFS=',' read -ra MODULES <<< "$TARGET_MODULES"
+            for module in "${MODULES[@]}"; do
+              echo "Building module: $module"
+              ./gradlew ":$module:publishToMavenLocal" --no-daemon
+            done
           fi
-          
-          # Build foundation first (no dependencies)
-          echo "📦 Building foundation..."
-          ./gradlew :foundation:publishToMavenLocal --no-daemon
-          
-          # Build core modules
-          echo "📦 Building core:android..."
-          ./gradlew :core:android:publishToMavenLocal --no-daemon
-          
-          echo "📦 Building core:modal..."
-          ./gradlew :core:modal:publishToMavenLocal --no-daemon
-          
-          # Build protocol modules
-          echo "📦 Building protocol:sign..."
-          ./gradlew :protocol:sign:publishToMavenLocal --no-daemon
-          
-          echo "📦 Building protocol:notify..."
-          ./gradlew :protocol:notify:publishToMavenLocal --no-daemon
-          
-          # Build product modules (depends on all above)
-          echo "📦 Building product:appkit..."
-          ./gradlew :product:appkit:publishToMavenLocal --no-daemon
 
-          echo "📦 Building core:bom..."
-          ./gradlew :core:bom:publishToMavenLocal --no-daemon
-          
-          echo "✅ All modules built and published to local repository"
-          
       - name: Deploy to Cross Nexus
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: |
-          DEPLOY_TYPE=${{ steps.extract_version.outputs.deploy_type }}
-          TAG_VERSION=${{ steps.extract_version.outputs.version }}
+          DEPLOY_TYPE="${{ needs.version-management.outputs.deploy_type }}"
           
-          echo "🚀 Deploying SDK modules from tag ${{ steps.extract_version.outputs.tag_name }}"
-          echo "📋 Deployed module versions:"
-          echo "  BOM: ${{ steps.read_versions.outputs.bom_version }}"
-          echo "  Foundation: ${{ steps.read_versions.outputs.foundation_version }}"
-          echo "  Core: ${{ steps.read_versions.outputs.core_version }}"
-          echo "  Sign: ${{ steps.read_versions.outputs.sign_version }}"
-          echo "  Notify: ${{ steps.read_versions.outputs.notify_version }}"
-          echo "  AppKit: ${{ steps.read_versions.outputs.appkit_version }}"
-          echo "  Modal Core: ${{ steps.read_versions.outputs.modal_core_version }}"
-          echo ""
+          echo "🚀 Deploying to Cross Nexus ($DEPLOY_TYPE)..."
+          echo "📋 Current versions:"
+          echo "  BOM: ${{ steps.versions.outputs.bom_version }}"
+          echo "  Foundation: ${{ steps.versions.outputs.foundation_version }}"
+          echo "  Core: ${{ steps.versions.outputs.core_version }}"
+          echo "  Sign: ${{ steps.versions.outputs.sign_version }}"
+          echo "  Notify: ${{ steps.versions.outputs.notify_version }}"
+          echo "  AppKit: ${{ steps.versions.outputs.appkit_version }}"
+          echo "  Modal Core: ${{ steps.versions.outputs.modal_core_version }}"
           
-          if [ "$DEPLOY_TYPE" = "release" ]; then
-            echo "📦 Deploying to Cross Nexus Release repository..."
+          case "$DEPLOY_TYPE" in
+            "release")
+              ./gradlew deploy -Ptype=release
+              ;;
+            "snapshot")
+              ./gradlew deploySnap -Ptype=snap
+              ;;
+            "both")
+              ./gradlew deployBoth
+              ;;
+          esac
+
+      - name: Determine Release Tag Strategy
+        id: tag_strategy
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-management.outputs.deploy_type == 'release' }}
+        run: |
+          # 모든 모듈 버전 읽기
+          BOM_VER=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          FOUNDATION_VER=$(grep "const val FOUNDATION_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          CORE_VER=$(grep "const val CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          SIGN_VER=$(grep "const val SIGN_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NOTIFY_VER=$(grep "const val NOTIFY_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          APPKIT_VER=$(grep "const val APPKIT_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          MODAL_CORE_VER=$(grep "const val MODAL_CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          
+          # 변경된 모듈들 확인 (마지막 릴리즈 태그와 비교)
+          LAST_RELEASE_TAG=$(git tag -l "release/android-v*" | grep -v -E "(alpha|beta|rc)" | sort -V | tail -n1 2>/dev/null || echo "")
+          
+          if [ -n "$LAST_RELEASE_TAG" ]; then
+            echo "📋 Comparing with last release: $LAST_RELEASE_TAG"
+            
+            # 변경된 파일들 확인
+            CHANGED_FILES=$(git diff --name-only "$LAST_RELEASE_TAG"..HEAD -- foundation/ core/ protocol/ product/ buildSrc/src/main/kotlin/Versions.kt | head -20)
+            echo "Changed files since last release:"
+            echo "$CHANGED_FILES"
+            
+            # 변경된 모듈 감지
+            CHANGED_MODULES=""
+            if echo "$CHANGED_FILES" | grep -q "foundation/"; then
+              CHANGED_MODULES="$CHANGED_MODULES,foundation:$FOUNDATION_VER"
+            fi
+            if echo "$CHANGED_FILES" | grep -q "core/"; then
+              CHANGED_MODULES="$CHANGED_MODULES,core:$CORE_VER"
+            fi
+            if echo "$CHANGED_FILES" | grep -q "protocol/sign"; then
+              CHANGED_MODULES="$CHANGED_MODULES,sign:$SIGN_VER"
+            fi
+            if echo "$CHANGED_FILES" | grep -q "protocol/notify"; then
+              CHANGED_MODULES="$CHANGED_MODULES,notify:$NOTIFY_VER"
+            fi
+            if echo "$CHANGED_FILES" | grep -q "product/appkit"; then
+              CHANGED_MODULES="$CHANGED_MODULES,appkit:$APPKIT_VER"
+            fi
+            if echo "$CHANGED_FILES" | grep -q "core/modal"; then
+              CHANGED_MODULES="$CHANGED_MODULES,modal-core:$MODAL_CORE_VER"
+            fi
+            
+            # BOM 변경 확인
+            BOM_CHANGED=false
+            if echo "$CHANGED_FILES" | grep -q "buildSrc/src/main/kotlin/Versions.kt"; then
+              # Versions.kt가 변경되었고 BOM_VERSION이 실제로 변경되었는지 확인
+              OLD_BOM=$(git show "$LAST_RELEASE_TAG:buildSrc/src/main/kotlin/Versions.kt" | grep "const val BOM_VERSION" | sed 's/.*"\(.*\)".*/\1/' || echo "")
+              if [ "$OLD_BOM" != "$BOM_VER" ]; then
+                BOM_CHANGED=true
+                CHANGED_MODULES="$CHANGED_MODULES,bom:$BOM_VER"
+              fi
+            fi
           else
-            echo "📦 Deploying to Cross Nexus Snapshot repository..."
+            echo "📋 No previous release found, treating as initial release"
+            BOM_CHANGED=true
+            CHANGED_MODULES="foundation:$FOUNDATION_VER,core:$CORE_VER,sign:$SIGN_VER,notify:$NOTIFY_VER,appkit:$APPKIT_VER,modal-core:$MODAL_CORE_VER,bom:$BOM_VER"
           fi
           
-          # Check if signing is configured and set environment variables conditionally
-          if [ -n "${{ secrets.SIGNING_KEY }}" ] && [ -n "${{ secrets.SIGNING_PASSWORD }}" ]; then
-            echo "🔑 Setting up signing for deployment..."
-            export SIGNING_KEY="${{ secrets.SIGNING_KEY }}"
-            export SIGNING_PASSWORD="${{ secrets.SIGNING_PASSWORD }}"
+          CHANGED_MODULES=$(echo "$CHANGED_MODULES" | sed 's/^,//')
+          
+          # 태그 전략 결정
+          if [ "$BOM_CHANGED" = "true" ]; then
+            # BOM이 변경된 경우: BOM 버전 기준 태그
+            TAG_VERSION="$BOM_VER"
+            TAG_TYPE="bom"
+            echo "🏷️ Using BOM-based tag (BOM changed): android-v${TAG_VERSION}"
+          elif [ -n "$CHANGED_MODULES" ]; then
+            # BOM은 변경되지 않았지만 개별 모듈이 변경된 경우: 가장 높은 버전 + 패치
+            HIGHEST_VER=$(echo "$CHANGED_MODULES" | tr ',' '\n' | cut -d':' -f2 | sort -V | tail -n1)
+            # 패치 버전 증가 (예: 1.0.1 → 1.0.1-patch.1)
+            TIMESTAMP=$(date +%Y%m%d%H%M)
+            TAG_VERSION="${HIGHEST_VER}-patch.${TIMESTAMP}"
+            TAG_TYPE="module"
+            echo "🏷️ Using module-based tag (modules changed): android-v${TAG_VERSION}"
           else
-            echo "⚠️  Deploying without signing..."
+            # 변경사항이 없는 경우: 현재 커밋 해시 기준
+            COMMIT_SHORT=$(git rev-parse --short HEAD)
+            TAG_VERSION="${BOM_VER}-build.${COMMIT_SHORT}"
+            TAG_TYPE="build"
+            echo "🏷️ Using build-based tag (no changes): android-v${TAG_VERSION}"
           fi
           
-          # Deploy based on type
-          if [ "$DEPLOY_TYPE" = "release" ]; then
-            ./gradlew deploy -Ptype=release
-          else
-            ./gradlew deploySnap -Ptype=snap
-          fi
+          echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          echo "tag_type=$TAG_TYPE" >> $GITHUB_OUTPUT
+          echo "changed_modules=$CHANGED_MODULES" >> $GITHUB_OUTPUT
+          echo "bom_changed=$BOM_CHANGED" >> $GITHUB_OUTPUT
+
+      - name: Create Git Release Tag
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-management.outputs.deploy_type == 'release' }}
+        run: |
+          TAG_VERSION="${{ steps.tag_strategy.outputs.tag_version }}"
+          TAG_TYPE="${{ steps.tag_strategy.outputs.tag_type }}"
+          CHANGED_MODULES="${{ steps.tag_strategy.outputs.changed_modules }}"
+          BOM_CHANGED="${{ steps.tag_strategy.outputs.bom_changed }}"
+          
+          TAG="release/android-v${TAG_VERSION}"
+          
+          echo "🏷️ Creating release tag: $TAG (type: $TAG_TYPE)"
+          
+          # 기존 태그 삭제 (있다면)
+          git tag -d "$TAG" 2>/dev/null || echo "Local tag $TAG not found"
+          git push origin ":refs/tags/$TAG" 2>/dev/null || echo "Remote tag $TAG not found"
+          
+          # 태그 메시지 생성
+          case "$TAG_TYPE" in
+            "bom")
+              TAG_MESSAGE="Android SDK Release v${TAG_VERSION} (BOM Updated)
+
+          📦 All Module Versions:"
+              ;;
+            "module")
+              TAG_MESSAGE="Android SDK Patch Release v${TAG_VERSION} (Module Updates)
+
+          🔄 Changed Modules: $CHANGED_MODULES
+          📦 All Module Versions:"
+              ;;
+            "build")
+              TAG_MESSAGE="Android SDK Build Release v${TAG_VERSION} (Build/CI Changes)
+
+          📦 All Module Versions:"
+              ;;
+          esac
+          
+          # 새 태그 생성 및 푸시
+          git tag -a "$TAG" -m "$TAG_MESSAGE
+
+          📦 Module Versions:
+          - BOM: ${{ steps.versions.outputs.bom_version }}
+          - Foundation: ${{ steps.versions.outputs.foundation_version }}
+          - Core: ${{ steps.versions.outputs.core_version }}
+          - Sign: ${{ steps.versions.outputs.sign_version }}
+          - Notify: ${{ steps.versions.outputs.notify_version }}
+          - AppKit: ${{ steps.versions.outputs.appkit_version }}
+          - Modal Core: ${{ steps.versions.outputs.modal_core_version }}
+          
+          🚀 Repository: https://package.cross-nexus.com/repository/cross-sdk-android/"
+          
+          git push origin "$TAG"
 
       - name: Create GitHub Release
-        if: steps.extract_version.outputs.is_snapshot == 'false'
+        if: ${{ github.event.inputs.dry_run != 'true' && needs.version-management.outputs.deploy_type == 'release' }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.extract_version.outputs.tag_name }}
-          release_name: Cross SDK Android Release ${{ steps.extract_version.outputs.tag_name }}
+          tag_name: release/android-v${{ steps.tag_strategy.outputs.tag_version }}
+          release_name: Cross SDK Android v${{ steps.tag_strategy.outputs.tag_version }} (${{ steps.tag_strategy.outputs.tag_type == 'bom' && 'Full Release' || steps.tag_strategy.outputs.tag_type == 'module' && 'Module Update' || 'Build Release' }})
           body: |
-            ## Cross SDK Android Release ${{ steps.extract_version.outputs.tag_name }}
+            ## 🚀 Cross SDK Android Release v${{ steps.tag_strategy.outputs.tag_version }}
             
-            ### 📦 Deployed Artifacts (Release)
+            ### 📋 Release Information
+            - **Release Type**: ${{ steps.tag_strategy.outputs.tag_type == 'bom' && '🎯 Full Release (BOM Updated)' || steps.tag_strategy.outputs.tag_type == 'module' && '🔄 Module Update' || '🏗️ Build Release' }}
+            - **Changed Modules**: ${{ steps.tag_strategy.outputs.changed_modules || 'Build/CI changes only' }}
+            - **BOM Updated**: ${{ steps.tag_strategy.outputs.bom_changed == 'true' && 'Yes ✅' || 'No ⏭️' }}
             
-            **BOM (Recommended):**
+            ### 📦 Maven Dependencies
+            
+            **BOM (권장):**
             ```kotlin
-            implementation(platform("io.crosstoken:android-bom:${{ steps.read_versions.outputs.bom_version }}"))
+            implementation(platform("io.crosstoken:android-bom:${{ steps.versions.outputs.bom_version }}"))
+            implementation("io.crosstoken:android-core")
+            implementation("io.crosstoken:appkit")
             ```
             
-            **Individual Modules:**
+            **개별 모듈:**
             ```kotlin
-            implementation("io.crosstoken:foundation:${{ steps.read_versions.outputs.foundation_version }}")
-            implementation("io.crosstoken:android-core:${{ steps.read_versions.outputs.core_version }}")
-            implementation("io.crosstoken:sign:${{ steps.read_versions.outputs.sign_version }}")
-            implementation("io.crosstoken:notify:${{ steps.read_versions.outputs.notify_version }}")
-            implementation("io.crosstoken:appkit:${{ steps.read_versions.outputs.appkit_version }}")
-            implementation("io.crosstoken:modal-core:${{ steps.read_versions.outputs.modal_core_version }}")
+            implementation("io.crosstoken:foundation:${{ steps.versions.outputs.foundation_version }}")
+            implementation("io.crosstoken:android-core:${{ steps.versions.outputs.core_version }}")
+            implementation("io.crosstoken:sign:${{ steps.versions.outputs.sign_version }}")
+            implementation("io.crosstoken:notify:${{ steps.versions.outputs.notify_version }}")
+            implementation("io.crosstoken:appkit:${{ steps.versions.outputs.appkit_version }}")
+            implementation("io.crosstoken:modal-core:${{ steps.versions.outputs.modal_core_version }}")
             ```
             
-            ### 📋 Versions Per Modules
+            ### 📋 모듈별 버전
             
-            | Module | Version |
+            | 모듈 | 버전 |
             |------|------|
-            | BOM | ${{ steps.read_versions.outputs.bom_version }} |
-            | Foundation | ${{ steps.read_versions.outputs.foundation_version }} |
-            | Core Android | ${{ steps.read_versions.outputs.core_version }} |
-            | Sign | ${{ steps.read_versions.outputs.sign_version }} |
-            | Notify | ${{ steps.read_versions.outputs.notify_version }} |
-            | AppKit | ${{ steps.read_versions.outputs.appkit_version }} |
-            | Modal Core | ${{ steps.read_versions.outputs.modal_core_version }} |
+            | BOM | ${{ steps.versions.outputs.bom_version }} |
+            | Foundation | ${{ steps.versions.outputs.foundation_version }} |
+            | Core Android | ${{ steps.versions.outputs.core_version }} |
+            | Sign Protocol | ${{ steps.versions.outputs.sign_version }} |
+            | Notify Protocol | ${{ steps.versions.outputs.notify_version }} |
+            | AppKit | ${{ steps.versions.outputs.appkit_version }} |
+            | Modal Core | ${{ steps.versions.outputs.modal_core_version }} |
             
-            ### 🏪 Setup Repository
+            ### 🏪 Repository 설정
             
             ```kotlin
             repositories {
                 maven {
                     url = uri("https://package.cross-nexus.com/repository/cross-sdk-android/")
-                    credentials {
-                        username = "your-nexus-username"
-                        password = "your-nexus-password"
-                    }
                 }
             }
             ```
             
-            ### 🚀 Deploying with a Tag
-            
-            ```bash
-            # deploy release
-            git tag -a "sdk-v1.0.0" -m "Release v1.0.0"
-            git push origin sdk-v1.0.0
-            
-            # deploy snapshot
-            git tag -a "sdk-snap-v1.0.0" -m "Snapshot v1.0.0"
-            git push origin sdk-snap-v1.0.0
-            ```
-            
-            ### 🔧 Deploying Local
-            
-            ```bash
-            # deploy to release repository
-            ./gradlew deploy -Ptype=release
-            
-            # deploy to snapshot repository (for development)
-            ./gradlew deploySnap -Ptype=snap
-            
-            # deploy to both repositories
-            ./gradlew deployBoth
-            ```
-            
-            ### 📍 Repository Address
-            - **Release**: https://package.cross-nexus.com/repository/cross-sdk-android/
-            - **Snapshot**: https://package.cross-nexus.com/repository/cross-sdk-android-snap/
+            ### 📖 문서
+            - [SDK Documentation](README.md)
+            - [API Reference](SDK-Documentation.md)
           draft: false
           prerelease: false
+
+      - name: Dry run summary
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "🧪 DRY RUN - 실제 배포는 수행되지 않았습니다"
+          echo "배포 타입: ${{ needs.version-management.outputs.deploy_type }}"
+          echo "대상 모듈: ${{ github.event.inputs.target_modules || '전체' }}"
+
+  # 배포 후 알림
+  notify:
+    name: Deployment Notification
+    needs: [deploy]
+    if: always() && needs.deploy.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify deployment result
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "✅ 배포 성공!"
+          else
+            echo "❌ 배포 실패!"
+          fi

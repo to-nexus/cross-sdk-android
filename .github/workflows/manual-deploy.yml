@@ -1,0 +1,247 @@
+name: Manual Deploy (Simple)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: '배포 타입'
+        required: true
+        type: choice
+        options:
+          - snapshot
+          - release
+          - both
+        default: snapshot
+      
+      modules:
+        description: '배포할 모듈 (쉼표로 구분, 비어있으면 전체)'
+        required: false
+        type: string
+        default: ''
+        placeholder: 'foundation,core:android,product:appkit'
+      
+      version_action:
+        description: '버전 관리'
+        required: true
+        type: choice
+        options:
+          - no-change
+          - auto-bump-fix
+          - auto-bump-release
+          - manual-set
+        default: no-change
+      
+      manual_versions:
+        description: '수동 버전 (version_action=manual-set일 때만)'
+        required: false
+        type: string
+        default: ''
+        placeholder: 'BOM=1.2.0,APPKIT=1.2.1,CORE=1.1.0'
+      
+      dry_run:
+        description: '테스트 실행만 (실제 배포 안함)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Manual Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+        
+      - name: Install Android SDK components
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Create secrets.properties
+        run: |
+          cat > secrets.properties << EOF
+          CROSS_FILENAME_UPLOAD=${{ vars.CROSS_FILENAME_UPLOAD }}
+          CROSS_STORE_PASSWORD_UPLOAD=${{ secrets.CROSS_STORE_PASSWORD_UPLOAD }}
+          CROSS_KEY_PASSWORD_UPLOAD=${{ secrets.CROSS_KEY_PASSWORD_UPLOAD }}
+          CROSS_KEYSTORE_ALIAS=${{ vars.CROSS_KEYSTORE_ALIAS }}
+          CROSS_FILENAME_INTERNAL=${{ vars.CROSS_FILENAME_INTERNAL }}
+          CROSS_STORE_PASSWORD_INTERNAL=${{ secrets.CROSS_STORE_PASSWORD_INTERNAL }}
+          CROSS_KEY_PASSWORD_INTERNAL=${{ secrets.CROSS_KEY_PASSWORD_INTERNAL }}
+          CROSS_FILENAME_DEBUG=${{ vars.CROSS_FILENAME_DEBUG }}
+          CROSS_STORE_PASSWORD_DEBUG=${{ secrets.CROSS_STORE_PASSWORD_DEBUG }}
+          CROSS_KEY_PASSWORD_DEBUG=${{ secrets.CROSS_KEY_PASSWORD_DEBUG }}
+          CROSS_KEYSTORE_ALIAS_DEBUG=${{ vars.CROSS_KEYSTORE_ALIAS_DEBUG }}
+          CROSS_PROJECT_ID=${{ vars.CROSS_PROJECT_ID }}
+          EOF
+
+      - name: Generate changeset before version management
+        run: |
+          VERSION_ACTION="${{ github.event.inputs.version_action }}"
+          
+          if [ "$VERSION_ACTION" != "no-change" ]; then
+            # 현재 BOM 버전 가져오기
+            CURRENT_BOM=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+            
+            echo "📝 Generating changeset for version management..."
+            
+            # 버전 액션에 따른 changeset 타입 결정
+            case "$VERSION_ACTION" in
+              "auto-bump-release") CHANGESET_TYPE="minor" ;;
+              "auto-bump-fix") CHANGESET_TYPE="patch" ;;
+              "manual-set") CHANGESET_TYPE="minor" ;;
+              *) CHANGESET_TYPE="patch" ;;
+            esac
+            
+            ./gradlew autoChangeset -Pversion="$CURRENT_BOM" -Ptype="$CHANGESET_TYPE"
+          fi
+
+      - name: Handle version management
+        run: |
+          VERSION_ACTION="${{ github.event.inputs.version_action }}"
+          MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
+          MODULES="${{ github.event.inputs.modules }}"
+          
+          echo "🔄 Version management: $VERSION_ACTION"
+          
+          case "$VERSION_ACTION" in
+            "auto-bump-fix")
+              if [ -n "$MODULES" ]; then
+                ./gradlew fixBump -Pmodules="$MODULES"
+              else
+                ./gradlew versionBump -Ptype=fix
+              fi
+              ;;
+            "auto-bump-release")
+              if [ -n "$MODULES" ]; then
+                ./gradlew releaseBump -Pmodules="$MODULES"
+              else
+                ./gradlew versionBump -Ptype=release
+              fi
+              ;;
+            "manual-set")
+              if [ -n "$MANUAL_VERSIONS" ]; then
+                # Parse manual versions: BOM=1.2.0,APPKIT=1.2.1 -> -PBOM=1.2.0 -PAPPKIT=1.2.1
+                GRADLE_ARGS=""
+                IFS=',' read -ra VERSIONS <<< "$MANUAL_VERSIONS"
+                for version in "${VERSIONS[@]}"; do
+                  GRADLE_ARGS="$GRADLE_ARGS -P$version"
+                done
+                echo "Manual version args: $GRADLE_ARGS"
+                ./gradlew manualBump $GRADLE_ARGS
+              else
+                echo "⚠️ Manual versions not provided, skipping version bump"
+              fi
+              ;;
+            "no-change")
+              echo "📌 No version changes requested"
+              ;;
+          esac
+          
+          # Commit version changes if any (including changesets)
+          if [ -n "$(git status --porcelain)" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add buildSrc/src/main/kotlin/Versions.kt .changeset/
+            git commit -m "chore: manual version bump and changeset for deployment"
+            git push
+          fi
+
+      - name: Display current versions
+        run: |
+          echo "📋 Current module versions:"
+          grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | while read line; do
+            echo "  $line"
+          done
+
+      - name: Build and deploy
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          CROSS_PROJECT_ID: ${{ secrets.CROSS_PROJECT_ID }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          DEPLOY_TYPE="${{ github.event.inputs.deploy_type }}"
+          MODULES="${{ github.event.inputs.modules }}"
+          DRY_RUN="${{ github.event.inputs.dry_run }}"
+          
+          echo "🚀 Starting deployment..."
+          echo "Deploy type: $DEPLOY_TYPE"
+          echo "Target modules: ${MODULES:-'all'}"
+          echo "Dry run: $DRY_RUN"
+          
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "🧪 DRY RUN MODE - Building only, no deployment"
+            # Build to local maven for testing
+            if [ -n "$MODULES" ]; then
+              IFS=',' read -ra MODULE_LIST <<< "$MODULES"
+              for module in "${MODULE_LIST[@]}"; do
+                echo "Building module: $module"
+                ./gradlew ":$module:publishToMavenLocal" --no-daemon
+              done
+            else
+              echo "Building all modules..."
+              ./gradlew :foundation:publishToMavenLocal --no-daemon
+              ./gradlew :core:android:publishToMavenLocal --no-daemon
+              ./gradlew :core:modal:publishToMavenLocal --no-daemon
+              ./gradlew :protocol:sign:publishToMavenLocal --no-daemon
+              ./gradlew :protocol:notify:publishToMavenLocal --no-daemon
+              ./gradlew :product:appkit:publishToMavenLocal --no-daemon
+              ./gradlew :core:bom:publishToMavenLocal --no-daemon
+            fi
+            echo "✅ Dry run completed successfully"
+          else
+            echo "🚀 Real deployment starting..."
+            
+            # Build dependencies first
+            ./gradlew :foundation:publishToMavenLocal --no-daemon
+            ./gradlew :core:android:publishToMavenLocal --no-daemon
+            ./gradlew :core:modal:publishToMavenLocal --no-daemon
+            ./gradlew :protocol:sign:publishToMavenLocal --no-daemon
+            ./gradlew :protocol:notify:publishToMavenLocal --no-daemon
+            ./gradlew :product:appkit:publishToMavenLocal --no-daemon
+            ./gradlew :core:bom:publishToMavenLocal --no-daemon
+            
+            # Deploy based on type
+            case "$DEPLOY_TYPE" in
+              "snapshot")
+                ./gradlew deploySnap -Ptype=snap
+                ;;
+              "release")
+                ./gradlew deploy -Ptype=release
+                ;;
+              "both")
+                ./gradlew deployBoth
+                ;;
+            esac
+            
+            echo "✅ Deployment completed successfully"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## 🎯 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deploy Type**: ${{ github.event.inputs.deploy_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Modules**: ${{ github.event.inputs.modules || 'All modules' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version Action**: ${{ github.event.inputs.version_action }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ github.event.inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "- **Note**: This was a dry run - no actual deployment occurred" >> $GITHUB_STEP_SUMMARY
+          fi

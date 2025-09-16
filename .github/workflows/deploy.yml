@@ -222,11 +222,15 @@ jobs:
           echo ""
           
           # 쉼표 제거 및 정리
+          echo "🔍 Debug: Raw changed_modules='$changed_modules'"
+          
           if [ -n "$changed_modules" ]; then
             final_modules=$(echo "$changed_modules" | sed 's/^,//' | sed 's/,$//')
           else
             final_modules=""
           fi
+          
+          echo "🔍 Debug: Processed final_modules='$final_modules'"
           
           # 최종 결과 출력
           if [ -n "$final_modules" ] || [ "$build_config_changed" = "true" ]; then
@@ -240,7 +244,12 @@ jobs:
             fi
             
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
+            # GitHub Actions 출력 형식 안전하게 처리
+            if [ -n "$final_modules" ]; then
+              echo "changed_modules=$final_modules" >> $GITHUB_OUTPUT
+            else
+              echo "changed_modules=" >> $GITHUB_OUTPUT
+            fi
           else
             echo "⏭️ No module changes detected (documentation/config only)"
             echo "has_changes=false" >> $GITHUB_OUTPUT

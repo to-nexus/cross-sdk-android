@@ -947,6 +947,10 @@ jobs:
           
           echo "🏷️ Creating release tag: $TAG (type: $TAG_TYPE)"
           
+          # Git 사용자 설정
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
           # 기존 태그 삭제 (있다면)
           git tag -d "$TAG" 2>/dev/null || echo "Local tag $TAG not found"
           git push origin ":refs/tags/$TAG" 2>/dev/null || echo "Remote tag $TAG not found"

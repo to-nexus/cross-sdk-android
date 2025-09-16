@@ -888,8 +888,8 @@ jobs:
             if [ -n "${{ needs.detect-changes.outputs.changed_modules }}" ]; then
               COMMIT_MSG="$COMMIT_MSG
 
-Changed modules: ${{ needs.detect-changes.outputs.changed_modules }}
-Repository: ${{ github.ref_name == 'main' && 'production' || 'development' }}"
+              Changed modules: ${{ needs.detect-changes.outputs.changed_modules }}
+              Repository: ${{ github.ref_name == 'main' && 'production' || 'development' }}"
             fi
             
             git commit -m "$COMMIT_MSG"

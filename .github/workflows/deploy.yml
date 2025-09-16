@@ -98,10 +98,29 @@ jobs:
             exit 0
           fi
           
-          echo "🔍 Detecting module changes from recent commit..."
+          echo "🔍 Detecting module changes..."
           
-          # 최근 커밋에서 변경된 모듈 감지
-          changed_files=$(git diff --name-only HEAD~1 HEAD)
+          # 비교 기준점 결정: 마지막 릴리즈 태그 또는 main 브랜치
+          current_branch="${{ github.ref_name }}"
+          last_release_tag=$(git tag -l "release/android-v*" | grep -v -E "(alpha|beta|rc|patch|build)" | sort -V | tail -n1 2>/dev/null || echo "")
+          
+          if [ -n "$last_release_tag" ]; then
+            compare_ref="$last_release_tag"
+            echo "📋 Comparing with last release tag: $last_release_tag"
+          elif [ "$current_branch" != "main" ]; then
+            compare_ref="origin/main"
+            echo "📋 No release tags found, comparing with main branch (current: $current_branch)"
+          else
+            compare_ref="HEAD~1"
+            echo "📋 On main branch with no release tags, comparing with previous commit"
+          fi
+          
+          # 변경된 파일들 감지
+          echo "🔄 Running: git diff --name-only $compare_ref..HEAD"
+          changed_files=$(git diff --name-only $compare_ref..HEAD 2>/dev/null || {
+            echo "⚠️ Fallback to HEAD~1 comparison"
+            git diff --name-only HEAD~1 HEAD
+          })
           changed_modules=""
           
           echo "📝 Changed files:"

@@ -324,71 +324,31 @@ jobs:
           MANUAL_VERSIONS="${{ github.event.inputs.manual_versions }}"
           CHANGED_MODULES="${{ needs.detect-changes.outputs.changed_modules }}"
           
-          # 🎯 동적 모듈 매핑 함수
+          # 🎯 동적 모듈 매핑 함수 (수동 워크플로우용)
           convert_modules_to_gradle_format() {
             local input_modules="$1"
             
-            echo "🔍 Generating dynamic module mapping..."
-            
-            # Versions.kt에서 모든 모듈 상수 추출
-            echo "🔍 Parsing Versions.kt..."
-            VERSION_CONSTANTS=$(grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | \
-              grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME" | \
-              sed 's/.*const val \([A-Z_]*\)_VERSION.*/\1/' | \
-              grep -v "^$")
-            
-            echo "🔍 Raw grep output:"
-            grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt | grep -v "KEY_PUBLISH_VERSION\|SAMPLE_VERSION_NAME"
-            
-            echo "📋 Available Gradle constants:"
-            echo "$VERSION_CONSTANTS" | while read const; do
-              if [ -n "$const" ]; then
-                echo "  - $const"
-              fi
-            done
-            
-            # 동적 매핑 함수
-            map_module_to_gradle() {
-              local module="$1"
-              case "$module" in
-                "foundation") echo "FOUNDATION" ;;
-                "android-core") echo "CORE" ;;
-                "android-bom") echo "BOM" ;;
-                "modal-core") echo "MODAL_CORE" ;;
-                "sign") echo "SIGN" ;;
-                "notify") echo "NOTIFY" ;;
-                "appkit") echo "APPKIT" ;;
-                *)
-                  # 새 모듈의 경우 자동 매핑 시도
-                  # module-name -> MODULE_NAME 또는 MODULE
-                  local upper_module="${module^^}"
-                  local underscore_module="${module//-/_}"
-                  underscore_module="${underscore_module^^}"
-                  
-                  if echo "$VERSION_CONSTANTS" | grep -q "^${upper_module}$"; then
-                    echo "$upper_module"
-                  elif echo "$VERSION_CONSTANTS" | grep -q "^${underscore_module}$"; then
-                    echo "$underscore_module"
-                  else
-                    echo "⚠️ Unknown module: $module, using fallback: $upper_module" >&2
-                    echo "$upper_module"
-                  fi
-                  ;;
-              esac
-            }
-            
-            # 모듈 변환 실행
+            # 간단한 매핑
             local gradle_modules=""
             IFS=',' read -ra MODULES <<< "$input_modules"
             for module in "${MODULES[@]}"; do
               if [ -n "$module" ]; then
-                gradle_module=$(map_module_to_gradle "$module")
+                case "$module" in
+                  "foundation") gradle_module="FOUNDATION" ;;
+                  "android-core") gradle_module="CORE" ;;
+                  "android-bom") gradle_module="BOM" ;;
+                  "modal-core") gradle_module="MODAL_CORE" ;;
+                  "sign") gradle_module="SIGN" ;;
+                  "notify") gradle_module="NOTIFY" ;;
+                  "appkit") gradle_module="APPKIT" ;;
+                  *) gradle_module="${module^^}" ;;
+                esac
+                
                 if [ -n "$gradle_modules" ]; then
                   gradle_modules="$gradle_modules,$gradle_module"
                 else
                   gradle_modules="$gradle_module"
                 fi
-                echo "  📦 $module → $gradle_module"
               fi
             done
             
@@ -411,53 +371,67 @@ jobs:
           EOF
 
           echo "🔄 Version management started..."
-          echo "📋 Configuration:"
-          echo "  - Deploy type: $DEPLOY_TYPE"
-          echo "  - Version bump: $VERSION_BUMP"
-          echo "  - Event: ${{ github.event_name }}"
-          echo "  - Branch: ${{ github.ref_name }}"
+          echo "📋 Event: ${{ github.event_name }} | Branch: ${{ github.ref_name }}"
           echo ""
-          echo "🎯 Changed modules from detection: $CHANGED_MODULES"
           
-          # Push 이벤트 처리 - Versions.kt 변경 확인
+          # 현재 버전 목록 표시
+          echo "📦 Current SDK Versions:"
+          echo "┌─────────────────────────────────────────┐"
+          BOM_VER=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          FOUNDATION_VER=$(grep "const val FOUNDATION_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          CORE_VER=$(grep "const val CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          SIGN_VER=$(grep "const val SIGN_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NOTIFY_VER=$(grep "const val NOTIFY_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          APPKIT_VER=$(grep "const val APPKIT_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          MODAL_CORE_VER=$(grep "const val MODAL_CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          
+          printf "│ %-20s │ %-15s │\n" "Module" "Version"
+          echo "├─────────────────────────────────────────┤"
+          printf "│ %-20s │ %-15s │\n" "🎯 BOM" "$BOM_VER"
+          printf "│ %-20s │ %-15s │\n" "🏗️ Foundation" "$FOUNDATION_VER"
+          printf "│ %-20s │ %-15s │\n" "🔧 Android Core" "$CORE_VER"
+          printf "│ %-20s │ %-15s │\n" "🔐 Sign Protocol" "$SIGN_VER"
+          printf "│ %-20s │ %-15s │\n" "📢 Notify Protocol" "$NOTIFY_VER"
+          printf "│ %-20s │ %-15s │\n" "📱 AppKit" "$APPKIT_VER"
+          printf "│ %-20s │ %-15s │\n" "🎭 Modal Core" "$MODAL_CORE_VER"
+          echo "└─────────────────────────────────────────┘"
+          echo ""
+          
+          # Push 이벤트: Versions.kt 변경 확인만
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "🔍 Checking if Versions.kt was changed in this push..."
+            echo "🔍 Checking if Versions.kt was changed..."
             
             # Versions.kt 변경 여부 확인
             VERSIONS_CHANGED=$(echo "$changed_files" | grep -c "buildSrc/src/main/kotlin/Versions.kt" || echo "0")
             
             if [ "$VERSIONS_CHANGED" -gt 0 ]; then
-              echo "✅ Versions.kt was changed - proceeding with deployment"
+              echo "✅ Versions.kt changed - proceeding with deployment"
               
               # 브랜치별 배포 타입 설정
               if [ "${{ github.ref_name }}" = "main" ]; then
-                echo "🚀 Main branch - will deploy to both release and snapshot"
                 DEPLOY_TYPE="both"
+                echo "🚀 Main branch → Release + Snapshot"
               else
-                echo "🌿 CI branch - will deploy to snapshot only"
                 DEPLOY_TYPE="snapshot"
+                echo "🌿 CI branch → Snapshot only"
               fi
               
-              # 버전 범프는 이미 완료된 상태로 간주
-              VERSION_BUMP="none"
-              echo "📋 Version bump already completed (Versions.kt changed)"
+              VERSION_BUMP="none"  # 이미 완료됨
             else
-              echo "⏭️ Versions.kt was not changed - skipping deployment"
-              echo "💡 Only code changes detected, no version bump needed"
+              echo "⏭️ Versions.kt not changed - skipping deployment"
               echo "should_deploy=false" >> $GITHUB_OUTPUT
               exit 0
             fi
           else
-            echo "📋 Manual workflow - version bumps must be explicitly specified"
+            echo "📋 Manual workflow - processing version bump options"
           fi
           
-          # 버전 범프 실행 (push 이벤트에서는 건너뛰기)
+          # 버전 범프 실행 (수동 워크플로우에서만)
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "⏭️ Push event - skipping version bump (Versions.kt already changed)"
+            echo "⏭️ Push: Version bump already done manually"
             
           elif [ "$VERSION_BUMP" = "manual" ] && [ -n "$MANUAL_VERSIONS" ]; then
             echo "📝 Manual version bump: $MANUAL_VERSIONS"
-            # 수동 버전 설정 파싱 및 적용
             IFS=',' read -ra VERSIONS <<< "$MANUAL_VERSIONS"
             GRADLE_ARGS=""
             for version in "${VERSIONS[@]}"; do
@@ -466,19 +440,13 @@ jobs:
             ./gradlew manualBump $GRADLE_ARGS
             
           elif [ "$VERSION_BUMP" = "fix" ]; then
-            echo "🔧 Fix version bump (manual workflow)"
-            
+            echo "🔧 Fix version bump"
             GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
-            echo "📋 Final Gradle modules: $GRADLE_MODULES"
-            
             ./gradlew fixBump -Pmodules="$GRADLE_MODULES"
             
           elif [ "$VERSION_BUMP" = "release" ]; then
             echo "🚀 Release version bump"
-            
             GRADLE_MODULES=$(convert_modules_to_gradle_format "$CHANGED_MODULES")
-            echo "📋 Final Gradle modules: $GRADLE_MODULES"
-            
             ./gradlew releaseBump -Pmodules="$GRADLE_MODULES"
             
           else
@@ -498,9 +466,66 @@ jobs:
           echo "should_deploy=true" >> $GITHUB_OUTPUT
           echo "deploy_type=$DEPLOY_TYPE" >> $GITHUB_OUTPUT
           
-          # 현재 버전들 출력
-          echo "📋 Prepared versions:" 
-          grep "const val.*_VERSION" buildSrc/src/main/kotlin/Versions.kt
+          # 배포할 버전 목록 표시 (변경사항 하이라이트)
+          echo ""
+          echo "🚀 Versions to Deploy:"
+          echo "┌─────────────────────────────────────────┐"
+          NEW_BOM_VER=$(grep "const val BOM_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NEW_FOUNDATION_VER=$(grep "const val FOUNDATION_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NEW_CORE_VER=$(grep "const val CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NEW_SIGN_VER=$(grep "const val SIGN_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NEW_NOTIFY_VER=$(grep "const val NOTIFY_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NEW_APPKIT_VER=$(grep "const val APPKIT_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          NEW_MODAL_CORE_VER=$(grep "const val MODAL_CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
+          
+          printf "│ %-20s │ %-15s │\n" "Module" "Version"
+          echo "├─────────────────────────────────────────┤"
+          
+          # 변경된 버전 하이라이트
+          if [ "$NEW_BOM_VER" != "$BOM_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "🎯 BOM" "$NEW_BOM_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "🎯 BOM" "$NEW_BOM_VER"
+          fi
+          
+          if [ "$NEW_FOUNDATION_VER" != "$FOUNDATION_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "🏗️ Foundation" "$NEW_FOUNDATION_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "🏗️ Foundation" "$NEW_FOUNDATION_VER"
+          fi
+          
+          if [ "$NEW_CORE_VER" != "$CORE_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "🔧 Android Core" "$NEW_CORE_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "🔧 Android Core" "$NEW_CORE_VER"
+          fi
+          
+          if [ "$NEW_SIGN_VER" != "$SIGN_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "🔐 Sign Protocol" "$NEW_SIGN_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "🔐 Sign Protocol" "$NEW_SIGN_VER"
+          fi
+          
+          if [ "$NEW_NOTIFY_VER" != "$NOTIFY_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "📢 Notify Protocol" "$NEW_NOTIFY_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "📢 Notify Protocol" "$NEW_NOTIFY_VER"
+          fi
+          
+          if [ "$NEW_APPKIT_VER" != "$APPKIT_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "📱 AppKit" "$NEW_APPKIT_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "📱 AppKit" "$NEW_APPKIT_VER"
+          fi
+          
+          if [ "$NEW_MODAL_CORE_VER" != "$MODAL_CORE_VER" ]; then
+            printf "│ %-20s │ %-15s │ 🆕\n" "🎭 Modal Core" "$NEW_MODAL_CORE_VER"
+          else
+            printf "│ %-20s │ %-15s │\n" "🎭 Modal Core" "$NEW_MODAL_CORE_VER"
+          fi
+          
+          echo "└─────────────────────────────────────────┘"
+          echo "🆕 = Version changed | 📦 Deploy Type: $DEPLOY_TYPE"
 
   # 실제 배포
   deploy:

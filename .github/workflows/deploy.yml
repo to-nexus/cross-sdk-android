@@ -256,36 +256,41 @@ jobs:
           echo ""
           echo "🎯 Changed modules from detection: $CHANGED_MODULES"
           
-          # Main 브랜치 push시 자동 버전 범프 및 배포 타입 설정
+          # Main/CI 브랜치 push시 자동 버전 범프 및 배포 타입 설정
           if [ "${{ github.event_name }}" = "push" ]; then
             if [ "${{ github.ref_name }}" = "main" ]; then
               echo "🚀 Main branch push detected - will deploy to both release and snapshot"
               DEPLOY_TYPE="both"
-              
-              if [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
-                echo "🤖 Auto version bump detected for main branch push"
-                
-                # 커밋 메시지 분석으로 범프 타입 결정
-                LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-                echo "Last commit: $LAST_COMMIT_MSG"
-                
-                if echo "$LAST_COMMIT_MSG" | grep -q "^feat\|BREAKING CHANGE"; then
-                  AUTO_BUMP_TYPE="release"
-                  echo "🚀 Detected feature/breaking change → minor bump"
-                elif echo "$LAST_COMMIT_MSG" | grep -q "^fix\|^perf"; then
-                  AUTO_BUMP_TYPE="fix"  
-                  echo "🐛 Detected fix/perf → patch bump"
-                else
-                  AUTO_BUMP_TYPE="fix"
-                  echo "📝 Default → patch bump"
-                fi
-                
-                VERSION_BUMP="$AUTO_BUMP_TYPE"
-                echo "🔄 Auto version bump type: $VERSION_BUMP"
-              fi
             else
               echo "🌿 CI branch push detected - will deploy to snapshot only"
               DEPLOY_TYPE="snapshot"
+            fi
+            
+            # Main과 CI 브랜치 모두에서 자동 버전 범프
+            if [ "$VERSION_BUMP" = "none" ] && [ -n "$CHANGED_MODULES" ]; then
+              if [ "${{ github.ref_name }}" = "main" ]; then
+                echo "🤖 Auto version bump detected for main branch push"
+              else
+                echo "🤖 Auto version bump detected for CI branch push"
+              fi
+              
+              # 커밋 메시지 분석으로 범프 타입 결정
+              LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+              echo "Last commit: $LAST_COMMIT_MSG"
+              
+              if echo "$LAST_COMMIT_MSG" | grep -q "^feat\|BREAKING CHANGE"; then
+                AUTO_BUMP_TYPE="release"
+                echo "🚀 Detected feature/breaking change → minor bump"
+              elif echo "$LAST_COMMIT_MSG" | grep -q "^fix\|^perf"; then
+                AUTO_BUMP_TYPE="fix"  
+                echo "🐛 Detected fix/perf → patch bump"
+              else
+                AUTO_BUMP_TYPE="fix"
+                echo "📝 Default → patch bump"
+              fi
+              
+              VERSION_BUMP="$AUTO_BUMP_TYPE"
+              echo "🔄 Auto version bump type: $VERSION_BUMP"
             fi
           fi
           

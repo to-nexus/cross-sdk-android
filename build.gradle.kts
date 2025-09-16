@@ -6,10 +6,8 @@ plugins {
     id("version-bump")
 }
 
-// Changeset 및 스마트 버저닝 스크립트 적용
+// Changeset 스크립트 적용 (수동 워크플로우용)
 apply(from = "scripts/auto-changeset.gradle.kts")
-apply(from = "scripts/smart-versioning.gradle.kts")
-apply(from = "scripts/snapshot-versioning.gradle.kts")
 
 allprojects {
     tasks.withType<KotlinCompile>().configureEach {

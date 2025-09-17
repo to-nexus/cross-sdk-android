@@ -35,7 +35,7 @@ git push origin main
 #### **단계 4: 자동 배포**
 - ✅ **Versions.kt가 변경됨** → 자동 배포 실행
 - 🚀 **Main 브랜치** → Release + Snapshot 배포
-- 🌿 **CI 브랜치** → Snapshot만 배포
+- 🌿 **CI 브랜치** → Release만 배포 (개발 환경)
 
 ### 2️⃣ 수동 워크플로우 배포
 
@@ -104,7 +104,7 @@ GitHub Actions에서 **"Deploy SDK (Improved)"** 워크플로우를 수동 실�
   - Snapshot: `https://package.cross-nexus.com/repository/cross-sdk-android-snap/`
 
 ### 📍 CI 브랜치 (`ci/*`)
-- **배포 타입**: `snapshot`
+- **배포 타입**: `release` (개발 환경)
 - **리포지토리**:
   - Release: `https://package.cross-nexus.com/repository/dev-cross-sdk-android/`
   - Snapshot: `https://package.cross-nexus.com/repository/dev-cross-sdk-android-snap/`
@@ -202,7 +202,7 @@ git log --oneline -1 --name-only
 **A**: 브랜치명이 `ci/`로 시작하는지 확인하세요.
 ```bash
 git branch --show-current
-# ci/feature-name 형태여야 함
+# ci/feature-name 형태여야 함 (개발 환경으로 배포됨)
 ```
 
 ### Q: 배포 실패 후 버전이 롤백되지 않았어요
@@ -220,9 +220,22 @@ git commit -m "revert: rollback version after failed deployment"
 - **수동 배포**: `.github/workflows/manual-deploy.yml`
 
 ### 🏷️ Git 태그 전략
-- **릴리즈 태그**: `release/android-v{version}`
+- **릴리즈 태그**: `release/{version}` (예: `release/1.0.3`)
 - **스마트 태깅**: BOM/모듈/빌드 변경에 따른 적응형 태그
 - **자동 GitHub Release** 생성
+- **cross-sdk-js와 일관된 형식** 사용
+
+#### 📋 태그 예시
+```bash
+# 일반 릴리즈
+release/1.0.3
+release/1.0.4
+release/2.0.0
+
+# 프리릴리즈 (향후 지원)
+release/1.0.3-alpha.1
+release/1.0.3-beta.2
+```
 
 ### 📦 Maven 의존성 예시
 ```kotlin

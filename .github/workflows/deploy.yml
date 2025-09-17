@@ -102,7 +102,7 @@ jobs:
           
           # 비교 기준점 결정: 마지막 릴리즈 태그 또는 main 브랜치
           current_branch="${{ github.ref_name }}"
-          last_release_tag=$(git tag -l "release/android-v*" | grep -v -E "(alpha|beta|rc|patch|build)" | sort -V | tail -n1 2>/dev/null || echo "")
+          last_release_tag=$(git tag -l "release/*" | grep -v -E "(alpha|beta|rc|patch|build)" | sort -V | tail -n1 2>/dev/null || echo "")
           
           if [ -n "$last_release_tag" ]; then
             compare_ref="$last_release_tag"
@@ -853,7 +853,7 @@ jobs:
           MODAL_CORE_VER=$(grep "const val MODAL_CORE_VERSION" buildSrc/src/main/kotlin/Versions.kt | sed 's/.*"\(.*\)".*/\1/')
           
           # 변경된 모듈들 확인 (마지막 릴리즈 태그와 비교)
-          LAST_RELEASE_TAG=$(git tag -l "release/android-v*" | grep -v -E "(alpha|beta|rc)" | sort -V | tail -n1 2>/dev/null || echo "")
+          LAST_RELEASE_TAG=$(git tag -l "release/*" | grep -v -E "(alpha|beta|rc)" | sort -V | tail -n1 2>/dev/null || echo "")
           
           if [ -n "$LAST_RELEASE_TAG" ]; then
             echo "📋 Comparing with last release: $LAST_RELEASE_TAG"
@@ -943,7 +943,7 @@ jobs:
           CHANGED_MODULES="${{ steps.tag_strategy.outputs.changed_modules }}"
           BOM_CHANGED="${{ steps.tag_strategy.outputs.bom_changed }}"
           
-          TAG="release/android-v${TAG_VERSION}"
+          TAG="release/${TAG_VERSION}"
           
           echo "🏷️ Creating release tag: $TAG (type: $TAG_TYPE)"
           
@@ -997,7 +997,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: release/android-v${{ steps.tag_strategy.outputs.tag_version }}
+          tag_name: release/${{ steps.tag_strategy.outputs.tag_version }}
           release_name: Cross SDK Android v${{ steps.tag_strategy.outputs.tag_version }} (${{ steps.tag_strategy.outputs.tag_type == 'bom' && 'Full Release' || steps.tag_strategy.outputs.tag_type == 'module' && 'Module Update' || 'Build Release' }})
           body: |
             ## 🚀 Cross SDK Android Release v${{ steps.tag_strategy.outputs.tag_version }}

@@ -29,11 +29,18 @@ tasks {
 }
 
 afterEvaluate {
+    // 환경변수로 리포지토리 URL 설정 (GitHub Actions에서 제공)
+    val releaseRepoUrl = System.getenv("NEXUS_RELEASE_URL") ?: "https://package.cross-nexus.com/repository/cross-sdk-android/"
+    val snapshotRepoUrl = System.getenv("NEXUS_SNAPSHOT_URL") ?: "https://package.cross-nexus.com/repository/cross-sdk-android-snap/"
+    
+    println("📦 Release repository: $releaseRepoUrl")
+    println("📦 Snapshot repository: $snapshotRepoUrl")
+    
     publishing {
         repositories {
             maven {
                 name = "CrossNexusRelease"
-                url = uri("https://package.cross-nexus.com/repository/cross-sdk-android/")
+                url = uri(releaseRepoUrl)
                 credentials {
                     username = System.getenv("NEXUS_USERNAME") ?: project.findProperty("nexusUsername") as String?
                     password = System.getenv("NEXUS_PASSWORD") ?: project.findProperty("nexusPassword") as String?
@@ -42,7 +49,7 @@ afterEvaluate {
             
             maven {
                 name = "CrossNexusSnapshot"
-                url = uri("https://package.cross-nexus.com/repository/cross-sdk-android-snap/")
+                url = uri(snapshotRepoUrl)
                 credentials {
                     username = System.getenv("NEXUS_USERNAME") ?: project.findProperty("nexusUsername") as String?
                     password = System.getenv("NEXUS_PASSWORD") ?: project.findProperty("nexusPassword") as String?

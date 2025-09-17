@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@2.3.1/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [],
+  "linked": [
+    [
+      "io.crosstoken:foundation",
+      "io.crosstoken:android-core", 
+      "io.crosstoken:sign",
+      "io.crosstoken:notify",
+      "io.crosstoken:appkit",
+      "io.crosstoken:modal-core",
+      "io.crosstoken:android-bom"
+    ]
+  ],
+  "access": "restricted",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": ["@cross-sdk/sample-*"]
+}

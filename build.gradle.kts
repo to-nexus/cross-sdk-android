@@ -6,6 +6,9 @@ plugins {
     id("version-bump")
 }
 
+// Changeset 스크립트 적용 (수동 워크플로우용)
+apply(from = "scripts/auto-changeset.gradle.kts")
+
 allprojects {
     tasks.withType<KotlinCompile>().configureEach {
         kotlinOptions {

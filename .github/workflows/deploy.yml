@@ -42,7 +42,7 @@ jobs:
   deploy:
     name: Deploy SDK to Cross Nexus
     needs: sonarqube
-    runs-on: [arc-runner-set]
+    runs-on: [arc-runner-set-fronted]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

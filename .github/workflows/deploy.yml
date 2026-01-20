@@ -29,7 +29,7 @@ permissions:
 jobs:
   sonarqube:
     name: SonarQube Analysis
-    runs-on: ubuntu-latest
+    runs-on: [arc-runner-set]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,7 +42,7 @@ jobs:
   deploy:
     name: Deploy SDK to Cross Nexus
     needs: sonarqube
-    runs-on: ubuntu-latest
+    runs-on: [arc-runner-set]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

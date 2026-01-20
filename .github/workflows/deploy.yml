@@ -5,6 +5,8 @@ on:
     tags:
       - 'sdk-v*'
       - 'sdk-snap-v*'
+    branches:
+      - develop
   workflow_dispatch:
     inputs:
       version:
@@ -213,8 +215,24 @@ jobs:
           ./gradlew :core:bom:publishToMavenLocal --no-daemon
           
           echo "✅ All modules built and published to local repository"
+
+      - name: Build verification completed (develop branch)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          echo "✅ Build verification completed for develop branch"
+          echo "📋 Built module versions:"
+          echo "  BOM: ${{ steps.read_versions.outputs.bom_version }}"
+          echo "  Foundation: ${{ steps.read_versions.outputs.foundation_version }}"
+          echo "  Core: ${{ steps.read_versions.outputs.core_version }}"
+          echo "  Sign: ${{ steps.read_versions.outputs.sign_version }}"
+          echo "  Notify: ${{ steps.read_versions.outputs.notify_version }}"
+          echo "  AppKit: ${{ steps.read_versions.outputs.appkit_version }}"
+          echo "  Modal Core: ${{ steps.read_versions.outputs.modal_core_version }}"
+          echo ""
+          echo "ℹ️  Skipping deployment - develop branch builds are for verification only"
           
       - name: Deploy to Cross Nexus
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         env:
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
@@ -257,7 +275,7 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        if: steps.extract_version.outputs.is_snapshot == 'false'
+        if: startsWith(github.ref, 'refs/tags/') && steps.extract_version.outputs.is_snapshot == 'false'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

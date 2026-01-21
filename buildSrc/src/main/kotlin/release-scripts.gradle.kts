@@ -1,63 +1,53 @@
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.GradleException
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.execution.TaskExecutionGraphListener
 import java.util.Locale
 import kotlin.reflect.full.safeCast
 
 // Example ./gradlew releaseAllSDKs -Ptype=local
 // Example ./gradlew releaseAllSDKs -Ptype=sonatype
 // Example ./gradlew releaseAllSDKs -Ptype=crossnexus
-tasks.register("releaseAllSDKs") {
-    doLast {
-        project.findProperty("type")
-            ?.run(String::class::safeCast)
-            ?.run {
-                println("Converting parameter to an supported ReleaseType value")
-                ReleaseType.valueOf(this.uppercase(Locale.getDefault()))
-            }?.let { releaseType ->
-                generateListOfModuleTasks(releaseType).forEach { task ->
-                    println("Executing Task: $task")
-                    exec {
-                        val gradleCommand = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                            "gradlew.bat"
-                        } else {
-                            "./gradlew"
-                        }
-                        commandLine(gradleCommand, task.path)
-                    }
-                }
-            } ?: throw Exception("Missing Type parameter")
+val releaseAllSDKs = tasks.register("releaseAllSDKs") {
+    group = "publishing"
+    description = "Release all SDKs by wiring publish tasks (use -Ptype=local|sonatype|crossnexus_release|crossnexus_snapshot)"
+
+    doFirst {
+        // Keep this around for parity with the previous behavior / user feedback.
+        val gradleCommand = if (Os.isFamily(Os.FAMILY_WINDOWS)) "gradlew.bat" else "./gradlew"
+        println("Note: Gradle 9+ no longer supports nested Gradle invocation via Project.exec; this task now runs publish tasks within the same build.")
+        println("If you used to run: $gradleCommand releaseAllSDKs -Ptype=local")
+        println("It will still work, but without spawning a nested Gradle process.")
     }
 }
 
 // task for Cross Nexus
-tasks.register("releaseAllSDKsToCrossNexus") {
+val releaseAllSDKsToCrossNexus = tasks.register("releaseAllSDKsToCrossNexus") {
     group = "publishing"
     description = "Release all SDKs to Cross Nexus repositories (both release and snapshot)"
-    doLast {
-        generateListOfModuleTasks(ReleaseType.CROSSNEXUS_RELEASE).forEach { task ->
-            println("Executing Release Task: $task")
-            exec {
-                val gradleCommand = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                    "gradlew.bat"
-                } else {
-                    "./gradlew"
-                }
-                commandLine(gradleCommand, task.path)
-            }
+}
+
+gradle.taskGraph.addTaskExecutionGraphListener(object : TaskExecutionGraphListener {
+    override fun graphPopulated(graph: TaskExecutionGraph) {
+        if (graph.hasTask(releaseAllSDKs.get())) {
+        val releaseType = project.findProperty("type")
+            ?.run(String::class::safeCast)
+            ?.run {
+                println("Converting parameter to a supported ReleaseType value")
+                ReleaseType.valueOf(this.uppercase(Locale.getDefault()))
+            } ?: throw GradleException("Missing Type parameter. Example: ./gradlew releaseAllSDKs -Ptype=local")
+
+            releaseAllSDKs.get().dependsOn(generateListOfModuleTasks(releaseType))
         }
-        
-        generateListOfModuleTasks(ReleaseType.CROSSNEXUS_SNAPSHOT).forEach { task ->
-            println("Executing Snapshot Task: $task")
-            exec {
-                val gradleCommand = if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                    "gradlew.bat"
-                } else {
-                    "./gradlew"
-                }
-                commandLine(gradleCommand, task.path)
-            }
+
+        if (graph.hasTask(releaseAllSDKsToCrossNexus.get())) {
+            releaseAllSDKsToCrossNexus.get().dependsOn(
+                generateListOfModuleTasks(ReleaseType.CROSSNEXUS_RELEASE) +
+                    generateListOfModuleTasks(ReleaseType.CROSSNEXUS_SNAPSHOT)
+            )
         }
     }
-}
+})
 
 fun generateListOfModuleTasks(type: ReleaseType): List<Task> = compileListOfSDKs().extractListOfPublishingTasks(type)
 
